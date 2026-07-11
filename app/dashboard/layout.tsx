@@ -62,10 +62,13 @@ function DashboardContent({ children }: { children: ReactNode }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">جاري التحميل...</p>
+      <div className="flex h-screen items-center justify-center bg-background" dir="rtl">
+        <div className="text-center space-y-4">
+          <div className="relative w-12 h-12 mx-auto">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-shifa"></div>
+            <Heart className="w-5 h-5 text-accent-shifa-deep absolute inset-0 m-auto animate-pulse" />
+          </div>
+          <p className="text-sm font-bold text-muted-foreground">جاري تحميل لوحة التحكم...</p>
         </div>
       </div>
     );
@@ -77,15 +80,15 @@ function DashboardContent({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-background text-foreground" dir="rtl">
       {/* Sidebar ديناميكي */}
       <Sidebar />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 border-b bg-white dark:bg-gray-950 px-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            نظام إدارة العيادات
+        <header className="h-16 border-b border-border-shifa bg-card px-6 flex items-center justify-between relative z-10">
+          <h1 className="font-display font-extrabold text-lg text-foreground">
+            لوحة تحكم عيادة شفاء
           </h1>
           {/* User Menu */}
           <div className="flex items-center gap-4">
@@ -97,14 +100,19 @@ function DashboardContent({ children }: { children: ReactNode }) {
               role={user?.role}
               facility={user?.facilityName}
             />
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 ml-2" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              className="hover:bg-rose-error/10 hover:text-rose-error text-muted-foreground gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
+            >
+              <LogOut className="w-4 h-4 ml-1.5" />
               تسجيل الخروج
             </Button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 bg-bg-shifa-soft/30 relative">
           {children}
         </main>
       </div>

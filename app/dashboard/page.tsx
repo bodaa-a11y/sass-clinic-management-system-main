@@ -339,36 +339,34 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden" dir="rtl">
+      <div className="flex flex-col h-screen overflow-hidden bg-background p-6 space-y-6" dir="rtl">
         {/* Header Skeleton */}
         <div className="flex-shrink-0 flex items-center justify-between py-4">
           <div>
-            <Skeleton className="h-8 w-40 mb-2" />
-            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-8 w-48 mb-2 bg-border-shifa/50" />
+            <Skeleton className="h-4 w-64 bg-border-shifa/50" />
           </div>
           <div className="flex items-center gap-4">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-10 w-40" />
-            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-10 w-28 bg-border-shifa/50" />
           </div>
         </div>
 
-        {/* Quick Stats Skeleton - Compact */}
+        {/* Quick Stats Skeleton */}
         <div className="flex-shrink-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="border border-slate-200 min-h-[100px] rounded-xl">
-                <CardContent className="p-4">
+              <Card key={i} className="border border-border-shifa min-h-[110px] rounded-2xl bg-card">
+                <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1">
-                      <Skeleton className="h-4 w-16 mb-1" />
-                      <Skeleton className="h-6 w-12" />
+                      <Skeleton className="h-4 w-16 mb-2 bg-border-shifa/50" />
+                      <Skeleton className="h-6 w-12 bg-border-shifa/50" />
                     </div>
-                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <Skeleton className="h-11 w-11 rounded-xl bg-border-shifa/50" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-3 w-12" />
+                  <div className="flex items-center justify-between mt-4">
+                    <Skeleton className="h-5 w-16 bg-border-shifa/50" />
+                    <Skeleton className="h-3.5 w-12 bg-border-shifa/50" />
                   </div>
                 </CardContent>
               </Card>
@@ -377,35 +375,35 @@ export default function DashboardPage() {
         </div>
 
         {/* Bottom Row Skeleton */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
           {/* Booking Chart Skeleton */}
-          <Card className="lg:col-span-2 border border-slate-200 rounded-xl h-full flex flex-col">
+          <Card className="lg:col-span-2 border border-border-shifa rounded-2xl h-full flex flex-col bg-card">
             <CardHeader className="flex-shrink-0">
-              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-5 w-40 bg-border-shifa/50" />
             </CardHeader>
-            <CardContent className="flex-1 min-h-0">
-              <Skeleton className="h-full w-full" />
+            <CardContent className="flex-1 p-5 min-h-0">
+              <Skeleton className="h-full w-full bg-border-shifa/50" />
             </CardContent>
           </Card>
 
           {/* Appointments Skeleton */}
-          <Card className="lg:col-span-1 border border-slate-200 rounded-xl h-full flex flex-col">
+          <Card className="lg:col-span-1 border border-border-shifa rounded-2xl h-full flex flex-col bg-card">
             <CardHeader className="flex-shrink-0 flex items-center justify-between">
-              <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-5 w-24 bg-border-shifa/50" />
+              <Skeleton className="h-8 w-16 bg-border-shifa/50" />
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+            <CardContent className="flex-1 overflow-y-auto p-5">
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 border border-border-shifa/50 rounded-xl bg-bg-shifa-soft/20">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Skeleton className="h-5 w-12" />
+                      <Skeleton className="h-5 w-12 bg-border-shifa/50" />
                       <div className="flex-1 min-w-0">
-                        <Skeleton className="h-4 w-24 mb-1" />
-                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-24 mb-1.5 bg-border-shifa/50" />
+                        <Skeleton className="h-3 w-20 bg-border-shifa/50" />
                       </div>
                     </div>
-                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-16 bg-border-shifa/50" />
                   </div>
                 ))}
               </div>
@@ -418,15 +416,15 @@ export default function DashboardPage() {
 
   return (
     <PageTransition>
-      <div className="flex flex-col h-screen overflow-hidden" dir="rtl">
+      <div className="flex flex-col gap-6 font-sans bg-transparent min-h-full pb-10" dir="rtl">
         {/* Header */}
         <SlideIn direction="up" delay={0.1}>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-slate-900">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="font-display font-extrabold text-3xl sm:text-4xl text-foreground">
                 {getGreeting()}، {user?.name || user?.email || ''}
               </h1>
-              <p className="text-base text-slate-600">
+              <p className="text-sm text-muted-foreground font-semibold">
                 {userRole === 'doctor' && facilityType === 'single_clinic' && 'عيادة طبيب واحد'}
                 {userRole === 'doctor' && facilityType === 'multi_clinic' && 'عيادة متعددة أطباء'}
                 {userRole === 'doctor' && facilityType === 'medical_center' && 'مركز طبي'}
@@ -440,8 +438,13 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <AIBubble state="idle" size="md" />
               <HoverScale>
-                <Button onClick={fetchStats} variant="outline" size="lg">
-                  تحديث
+                <Button 
+                  onClick={fetchStats} 
+                  variant="outline" 
+                  size="lg"
+                  className="border-border-shifa hover:bg-bg-shifa-soft rounded-xl text-sm font-bold"
+                >
+                  تحديث البيانات
                 </Button>
               </HoverScale>
             </div>
@@ -458,20 +461,20 @@ export default function DashboardPage() {
                 size: 'small' as const,
                 content: (
                   <HoverScale>
-                    <Card className="border border-slate-200 h-full min-h-[100px] rounded-xl">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
+                    <Card className="border border-border-shifa h-full min-h-[110px] rounded-2xl bg-card shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex-1">
-                            <p className="text-xs text-slate-600 mb-1">مواعيد اليوم</p>
-                            <p className="text-2xl font-bold text-slate-900">{stats.todayAppointments}</p>
+                            <p className="text-xs font-bold text-muted-foreground mb-1">مواعيد اليوم</p>
+                            <p className="text-2xl font-extrabold text-foreground">{stats.todayAppointments}</p>
                           </div>
-                          <div className="w-10 h-10 bg-medical-blue/10 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-medical-blue" aria-hidden="true" />
+                          <div className="w-11 h-11 bg-accent-shifa-soft rounded-xl flex items-center justify-center">
+                            <Calendar className="w-5.5 h-5.5 text-accent-shifa-deep" aria-hidden="true" />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Sparkline data={sparklineData.appointments} color="#0066CC" width={60} height={25} showTrend />
-                          <p className="text-[10px] text-slate-500">{stats.completedAppointments} مكتمل</p>
+                        <div className="flex items-center justify-between pt-1">
+                          <Sparkline data={sparklineData.appointments} color="var(--accent-shifa)" width={60} height={25} showTrend />
+                          <p className="text-[11px] font-bold text-muted-foreground">{stats.completedAppointments} مكتمل</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -483,20 +486,20 @@ export default function DashboardPage() {
                 size: 'small' as const,
                 content: (
                   <HoverScale>
-                    <Card className="border border-slate-200 h-full min-h-[100px] rounded-xl">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
+                    <Card className="border border-border-shifa h-full min-h-[110px] rounded-2xl bg-card shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex-1">
-                            <p className="text-xs text-slate-600 mb-1">المرضى</p>
-                            <p className="text-2xl font-bold text-slate-900">{stats.totalPatients}</p>
+                            <p className="text-xs font-bold text-muted-foreground mb-1">المرضى المسجلين</p>
+                            <p className="text-2xl font-extrabold text-foreground">{stats.totalPatients}</p>
                           </div>
-                          <div className="w-10 h-10 bg-emerald-success/10 rounded-lg flex items-center justify-center">
-                            <Users className="w-5 h-5 text-emerald-success" aria-hidden="true" />
+                          <div className="w-11 h-11 bg-accent-shifa-soft rounded-xl flex items-center justify-center">
+                            <Users className="w-5.5 h-5.5 text-accent-shifa-deep" aria-hidden="true" />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Sparkline data={sparklineData.patients} color="#10B981" width={60} height={25} showTrend />
-                          <p className="text-[10px] text-slate-500">إجمالي</p>
+                        <div className="flex items-center justify-between pt-1">
+                          <Sparkline data={sparklineData.patients} color="var(--accent-shifa)" width={60} height={25} showTrend />
+                          <p className="text-[11px] font-bold text-muted-foreground">إجمالي الملفات</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -508,26 +511,26 @@ export default function DashboardPage() {
                 size: 'small' as const,
                 content: (
                   <HoverScale>
-                    <Card className="border border-slate-200 h-full min-h-[100px] rounded-xl">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
+                    <Card className="border border-border-shifa h-full min-h-[110px] rounded-2xl bg-card shadow-sm">
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex-1">
-                            <p className="text-xs text-slate-600 mb-1">معدل الحضور</p>
-                            <p className="text-2xl font-bold text-slate-900">{stats.attendanceRate}%</p>
+                            <p className="text-xs font-bold text-muted-foreground mb-1">معدل الحضور</p>
+                            <p className="text-2xl font-extrabold text-foreground">{stats.attendanceRate}%</p>
                           </div>
-                          <div className="w-10 h-10 bg-teal-secondary/10 rounded-lg flex items-center justify-center">
-                            <Activity className="w-5 h-5 text-teal-secondary" aria-hidden="true" />
+                          <div className="w-11 h-11 bg-accent-shifa-soft rounded-xl flex items-center justify-center">
+                            <Activity className="w-5.5 h-5.5 text-accent-shifa-deep" aria-hidden="true" />
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <Sparkline data={sparklineData.attendance} color="#14B8A6" width={60} height={25} showTrend />
+                        <div className="flex items-center justify-between pt-1">
+                          <Sparkline data={sparklineData.attendance} color="var(--accent-shifa)" width={60} height={25} showTrend />
                           <div className="flex items-center gap-1">
                             {stats.attendanceRate >= 80 ? (
-                              <TrendingUp className="w-3 h-3 text-emerald-success" aria-hidden="true" />
+                              <TrendingUp className="w-3.5 h-3.5 text-accent-shifa-deep" aria-hidden="true" />
                             ) : (
-                              <TrendingDown className="w-3 h-3 text-red-500" aria-hidden="true" />
+                              <TrendingDown className="w-3.5 h-3.5 text-rose-error" aria-hidden="true" />
                             )}
-                            <p className={`text-[10px] ${stats.attendanceRate >= 80 ? 'text-emerald-success' : 'text-red-500'}`}>
+                            <p className={`text-[11px] font-bold ${stats.attendanceRate >= 80 ? 'text-accent-shifa-deep' : 'text-rose-error'}`}>
                               {stats.attendanceRate >= 80 ? 'ممتاز' : 'يحتاج تحسين'}
                             </p>
                           </div>
@@ -542,24 +545,24 @@ export default function DashboardPage() {
                 size: 'small' as const,
                 content: (
                   <HoverScale>
-                    <Card className="border border-slate-200 h-full min-h-[100px] rounded-xl">
-                      <CardContent className="p-4">
+                    <Card className="border border-border-shifa h-full min-h-[110px] rounded-2xl bg-card shadow-sm">
+                      <CardContent className="p-5">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex-1">
-                            <p className="text-xs text-slate-600 mb-1">إيرادات اليوم</p>
-                            <p className="text-2xl font-bold text-slate-900">{stats.todayRevenue.toFixed(0)}</p>
+                            <p className="text-xs font-bold text-muted-foreground mb-1">إيرادات اليوم</p>
+                            <p className="text-2xl font-extrabold text-foreground">{stats.todayRevenue.toFixed(0)} ر.س</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-slate-500">مصروف: {stats.todayExpenses.toFixed(0)}</span>
-                              <span className={`text-[10px] ${stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              <span className="text-[10px] text-muted-foreground">مصروف: {stats.todayExpenses.toFixed(0)}</span>
+                              <span className={`text-[10px] font-bold ${stats.netProfit >= 0 ? 'text-accent-shifa-deep' : 'text-rose-error'}`}>
                                 صافي: {stats.netProfit.toFixed(0)}
                               </span>
                             </div>
                           </div>
-                          <div className="w-10 h-10 bg-amber-warning/10 rounded-lg flex items-center justify-center">
-                            <DollarSign className="w-5 h-5 text-amber-warning" aria-hidden="true" />
+                          <div className="w-11 h-11 bg-accent-shifa-soft rounded-xl flex items-center justify-center">
+                            <DollarSign className="w-5.5 h-5.5 text-accent-shifa-deep" aria-hidden="true" />
                           </div>
                         </div>
-                        <p className="text-[10px] text-slate-500 mt-2">{stats.pendingInvoices} فاتورة معلقة</p>
+                        <p className="text-[11px] font-semibold text-muted-foreground mt-1.5">{stats.pendingInvoices} فاتورة معلقة</p>
                       </CardContent>
                     </Card>
                   </HoverScale>
@@ -570,25 +573,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Bottom Row - Grid 2x1 with Contextual Relevance */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-          {/* Booking Chart - Left (Dynamic: 70% if appointments <= 5, 50% if > 10) */}
-          <SlideIn direction="up" delay={0.2} className={`min-h-0 ${todayAppointments.length > 10 ? 'lg:col-span-1' : 'lg:col-span-2'}`}>
-            <Card className="border border-slate-200 rounded-xl h-full flex flex-col">
-              <CardHeader className="flex-shrink-0">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Calendar className="w-4 h-4 text-medical-blue" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Booking Chart */}
+          <SlideIn direction="up" delay={0.2} className={`lg:col-span-2`}>
+            <Card className="border border-border-shifa rounded-2xl bg-card shadow-sm h-full flex flex-col">
+              <CardHeader className="flex-shrink-0 border-b border-border-shifa/60 pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-display font-bold">
+                  <Calendar className="w-5 h-5 text-accent-shifa-deep" />
                   حجم المواعيد - آخر 7 أيام
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 min-h-0">
+              <CardContent className="p-5 flex-1">
                 {bookingData.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center justify-center h-48">
                     <div className="text-center">
-                      <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground opacity-50 mb-3" />
+                      <h3 className="text-sm font-bold text-foreground mb-1">
                         لا توجد بيانات حجز
                       </h3>
-                      <p className="text-sm text-gray-500">لم يتم تسجيل أي مواعيد في الأيام السبعة الماضية</p>
+                      <p className="text-xs text-muted-foreground">لم يتم تسجيل أي مواعيد في الأيام السبعة الماضية</p>
                     </div>
                   </div>
                 ) : (
@@ -598,42 +601,42 @@ export default function DashboardPage() {
             </Card>
           </SlideIn>
 
-          {/* Today's Appointments - Right (Dynamic: 30% if appointments <= 5, 50% if > 10) */}
-          <SlideIn direction="up" delay={0.3} className={`min-h-0 ${todayAppointments.length > 10 ? 'lg:col-span-2' : 'lg:col-span-1'}`}>
-            <Card className="border border-slate-200 rounded-xl h-full flex flex-col">
-              <CardHeader className="flex-shrink-0 flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Calendar className="w-4 h-4 text-medical-blue" />
+          {/* Today's Appointments */}
+          <SlideIn direction="up" delay={0.3} className={`lg:col-span-1`}>
+            <Card className="border border-border-shifa rounded-2xl bg-card shadow-sm h-full flex flex-col">
+              <CardHeader className="flex-shrink-0 flex items-center justify-between border-b border-border-shifa/60 pb-3">
+                <CardTitle className="flex items-center gap-2 text-base font-display font-bold">
+                  <Calendar className="w-5 h-5 text-accent-shifa-deep" />
                   مواعيد اليوم
                 </CardTitle>
                 <Link href="/dashboard/appointments">
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" className="text-xs font-bold hover:bg-bg-shifa-soft">
                     عرض الكل
                   </Button>
                 </Link>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-4">
+              <CardContent className="p-5 flex-1">
                 {todayAppointments.length === 0 ? (
-                  <div className="text-center py-4">
-                    <Calendar className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">لا توجد مواعيد اليوم</p>
+                  <div className="text-center py-8">
+                    <Calendar className="w-8 h-8 mx-auto text-muted-foreground opacity-50 mb-2" />
+                    <p className="text-xs font-semibold text-muted-foreground">لا توجد مواعيد اليوم</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {todayAppointments.slice(0, 5).map((apt) => {
                       const waitTime = getWaitTime(apt.checkInTime, apt.startTimeActual);
                       const waitMinutes = waitTime ? parseInt(waitTime) : 0;
                       
                       return (
-                        <div key={apt.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                        <div key={apt.id} className="flex items-center justify-between p-3.5 border border-border-shifa/60 bg-bg-shifa-soft/30 rounded-xl hover:bg-bg-shifa-soft/60 transition-colors">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-blue-600 min-w-[50px]">{apt.startTime}</div>
+                            <div className="text-sm font-bold text-accent-shifa-deep min-w-[50px]">{apt.startTime}</div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-gray-900 truncate">{apt.patientName}</div>
-                              <div className="flex items-center gap-2">
-                                <div className="text-xs text-gray-600 truncate">{apt.doctorName}</div>
+                              <div className="font-bold text-sm text-foreground truncate">{apt.patientName}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <div className="text-xs text-muted-foreground truncate">{apt.doctorName}</div>
                                 {waitTime && (apt.status === 'in-waiting-room' || apt.status === 'in-progress') && (
-                                  <Badge variant="outline" className={`text-[10px] flex items-center gap-1 border-orange-200 ${getWaitTimeColor(waitMinutes)}`}>
+                                  <Badge variant="outline" className={`text-[10px] flex items-center gap-1 border-orange-200 bg-orange-50 text-orange-600`}>
                                     <Timer className="w-3 h-3" />
                                     {waitTime}
                                   </Badge>
@@ -641,7 +644,7 @@ export default function DashboardPage() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 mr-2">
                             {getStatusBadge(apt.status)}
                           </div>
                         </div>
@@ -650,7 +653,7 @@ export default function DashboardPage() {
                     {todayAppointments.length > 5 && (
                       <div className="text-center pt-2">
                         <Link href="/dashboard/appointments">
-                          <Button variant="ghost" size="sm" className="text-xs">
+                          <Button variant="ghost" size="sm" className="text-xs font-bold hover:bg-bg-shifa-soft">
                             +{todayAppointments.length - 5} مواعيد أخرى
                           </Button>
                         </Link>
@@ -662,6 +665,10 @@ export default function DashboardPage() {
             </Card>
           </SlideIn>
         </div>
+      </div>
+    </PageTransition>
+  );
+}
 
       {/* Today's Appointments - Removed (moved to bottom row) */}
 

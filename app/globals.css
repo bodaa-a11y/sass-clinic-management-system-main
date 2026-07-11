@@ -53,6 +53,19 @@
   --color-border-shifa: var(--border-shifa);
   --color-card-shifa: var(--card-shifa);
   --shadow-shifa: var(--shadow-shifa);
+
+  /* Override blue shades to match Shifa green branding */
+  --color-blue-50: #f6fffb;
+  --color-blue-100: rgba(0, 255, 178, 0.12);
+  --color-blue-200: #e6f3ee;
+  --color-blue-300: #b3ebd4;
+  --color-blue-400: #66dfad;
+  --color-blue-500: #00C994;
+  --color-blue-600: #00C994;
+  --color-blue-700: #00b080;
+  --color-blue-800: #00966d;
+  --color-blue-900: #007d5b;
+  --color-blue-950: #001810;
 }
 
 :root {
@@ -106,31 +119,31 @@
   --card-foreground: #F1F5F9; /* Slate 100 */
   --popover: #1E293B; /* Slate 800 */
   --popover-foreground: #F1F5F9; /* Slate 100 */
-  --primary: #0066CC; /* Medical Blue */
+  --primary: #00C994; /* Shifa Emerald */
   --primary-foreground: #FFFFFF;
   --secondary: #334155; /* Slate 700 */
   --secondary-foreground: #F1F5F9; /* Slate 100 */
   --muted: #334155; /* Slate 700 */
   --muted-foreground: #CBD5E1; /* Slate 300 */
-  --accent: #00A896; /* Teal */
-  --accent-foreground: #FFFFFF;
+  --accent: #00FFB2; /* Shifa Light Green */
+  --accent-foreground: #001810;
   --destructive: #EF4444; /* Rose */
   --border: #334155; /* Slate 700 */
   --input: #1E293B; /* Slate 800 */
-  --ring: #0066CC; /* Medical Blue */
-  --chart-1: #0066CC; /* Medical Blue */
+  --ring: #00C994; /* Shifa Emerald */
+  --chart-1: #00C994;
   --chart-2: #00A896; /* Teal */
   --chart-3: #10B981; /* Emerald */
   --chart-4: #F59E0B; /* Amber */
   --chart-5: #EF4444; /* Rose */
   --sidebar: #1E293B; /* Slate 800 */
   --sidebar-foreground: #F1F5F9; /* Slate 100 */
-  --sidebar-primary: #0066CC; /* Medical Blue */
+  --sidebar-primary: #00C994;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #334155; /* Slate 700 */
   --sidebar-accent-foreground: #F1F5F9; /* Slate 100 */
   --sidebar-border: #334155; /* Slate 700 */
-  --sidebar-ring: #0066CC; /* Medical Blue */
+  --sidebar-ring: #00C994;
 
   /* Shifa Clinic Dark Theme Variables */
   --accent-shifa: #00FFB2;
@@ -187,7 +200,7 @@
 
 /* Custom Design Colors */
 :root {
-  --color-medical-blue: #0066CC;
+  --color-medical-blue: #00C994; /* Shifa Emerald Deep */
   --color-teal-secondary: #00A896;
   --color-emerald-success: #10B981;
   --color-amber-warning: #F59E0B;
@@ -195,11 +208,11 @@
 }
 
 .bg-medical-blue {
-  background-color: #0066CC;
+  background-color: #00C994;
 }
 
 .text-medical-blue {
-  color: #0066CC;
+  color: #00C994;
 }
 
 .bg-teal-secondary {
@@ -250,10 +263,10 @@
 }
 
 .glass-accent {
-  background: rgba(0, 102, 204, 0.1);
+  background: rgba(0, 201, 148, 0.1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 102, 204, 0.2);
+  border: 1px solid rgba(0, 201, 148, 0.2);
 }
 
 .glass-blur-sm {
