@@ -288,14 +288,49 @@ export default function HomePage() {
                 في عيادة شفاء نجمع بين خبرة الأطباء ودقة الأجهزة الحديثة لنقدّم لك تجربة علاجية مريحة، سريعة، وآمنة — لأن صحتك تستحق الأفضل دائماً.
               </p>
               
-              <div className="flex flex-wrap items-center gap-4">
-                <a href="#booking" className="btn-glow inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-base">
-                  احجز موعدك الآن
-                  <ArrowRight className="w-5 h-5 rotate-180" />
-                </a>
-                <a href="#services" className="btn-outline-shifa inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-base font-semibold">
-                  تصفّح الخدمات
-                </a>
+              {/* Feature Grid */}
+              <div className="grid grid-cols-2 gap-4 my-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-emerald-success/20 rounded-lg flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-emerald-success" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">سريع وفعال</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-medical-blue/20 rounded-lg flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-medical-blue" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">آمن ومحمي</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-teal-secondary/20 rounded-lg flex items-center justify-center">
+                    <Users className="w-5 h-5 text-teal-secondary" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">سهل الاستخدام</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-warning/20 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-amber-warning" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">تقارير مفصلة</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => router.push('/dashboard/login')}
+                  className="btn-glow inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-base cursor-pointer"
+                >
+                  <Building2 className="w-5 h-5" />
+                  دخول العيادة (طبيب / موظف)
+                </button>
+                <button
+                  onClick={() => router.push('/portal/login')}
+                  className="btn-outline-shifa inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-base font-semibold cursor-pointer"
+                >
+                  <Calendar className="w-5 h-5" />
+                  تسجيل دخول كمريض (بوابة المريض)
+                </button>
               </div>
 
               {/* Mini trust */}
