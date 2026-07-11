@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button-redesigned'
 import { store } from '@/lib/store'
 import { 
@@ -101,29 +102,29 @@ export default function HomePage() {
 
             {/* Selection Buttons */}
             <div className="w-full flex flex-col gap-4">
-              <button
-                onClick={() => router.push('/dashboard/login')}
-                className="btn-glow w-full py-4.5 rounded-2xl text-lg flex items-center justify-center gap-3 transition-all cursor-pointer"
+              <Link
+                href="/dashboard/login"
+                className="btn-glow w-full py-4 rounded-2xl text-lg flex items-center justify-center gap-3 transition-all cursor-pointer"
               >
                 <Building2 className="w-6 h-6" />
                 دخول العيادة (طبيب / موظف)
-              </button>
+              </Link>
               
-              <button
-                onClick={() => router.push('/portal/login')}
-                className="btn-outline-shifa w-full py-4.5 rounded-2xl text-lg flex items-center justify-center gap-3 font-semibold transition-all cursor-pointer"
+              <Link
+                href="/portal/login"
+                className="btn-outline-shifa w-full py-4 rounded-2xl text-lg flex items-center justify-center gap-3 font-semibold transition-all cursor-pointer"
               >
                 <Users className="w-6 h-6" />
                 تسجيل دخول كمريض (بوابة المريض)
-              </button>
+              </Link>
 
-              <button
-                onClick={() => router.push('/book/shifa-clinic')}
+              <Link
+                href="/book/shifa-clinic"
                 className="text-sm font-bold text-accent-shifa-deep hover:underline transition-all cursor-pointer pt-2 flex items-center justify-center gap-1"
               >
                 <Calendar className="w-4 h-4" />
                 أو حجز موعد سريع مباشرة
-              </button>
+              </Link>
             </div>
 
             {/* Feature Icons Grid */}
