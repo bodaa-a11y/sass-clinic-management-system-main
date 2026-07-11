@@ -519,3 +519,49 @@
   background-clip: text;
   color: transparent;
 }
+
+/* Premium Animated Logo Container styles */
+.logo-container-glow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(0, 255, 178, 0.05);
+  border: 2.5px solid var(--accent-shifa);
+  box-shadow: 0 0 15px var(--accent-shifa-soft);
+  animation: logo-glow-pulse 3s infinite ease-in-out;
+  transition: all 0.3s ease;
+}
+
+.logo-outer-ring {
+  position: absolute;
+  inset: -8px;
+  border: 1.5px dashed var(--accent-shifa);
+  border-radius: 9999px;
+  opacity: 0.75;
+  animation: rotate-ring 16s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes logo-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px var(--accent-shifa-soft), inset 0 0 8px var(--accent-shifa-soft);
+    border-color: var(--accent-shifa-deep);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(0, 255, 178, 0.5), inset 0 0 16px rgba(0, 255, 178, 0.3);
+    border-color: var(--accent-shifa);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes rotate-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -20,10 +20,10 @@ const reemKufi = Reem_Kufi({
 });
 
 export const metadata: Metadata = {
-  title: "منصة إدارة العيادات",
-  description: "نظام شامل لإدارة المواعيد والمرضى والموظفين - EMR Platform",
-  keywords: ["إدارة عيادات", "مواعيد", "مرضى", "EMR", "سجلات طبية"],
-  authors: [{ name: "منصة إدارة العيادات" }],
+  title: "عافي - نظام إدارة العيادات | AAFI Clinic Management",
+  description: "نظام شامل لإدارة المواعيد والمرضى والموظفين - AAFI Clinic Management System",
+  keywords: ["عافي", "إدارة عيادات", "مواعيد", "مرضى", "EMR", "سجلات طبية", "AAFI"],
+  authors: [{ name: "AAFI - عافي" }],
 };
 
 export const viewport: Viewport = {

@@ -12,7 +12,7 @@ import { CommandPalette } from '@/components/search/command-palette';
 import { QuickActionsMenu } from '@/components/quick-actions/quick-actions-menu';
 import { store } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { LogOut, Heart } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 function DashboardContent({ children }: { children: ReactNode }) {
@@ -66,7 +66,6 @@ function DashboardContent({ children }: { children: ReactNode }) {
         <div className="text-center space-y-4">
           <div className="relative w-12 h-12 mx-auto">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-shifa"></div>
-            <Heart className="w-5 h-5 text-accent-shifa-deep absolute inset-0 m-auto animate-pulse" />
           </div>
           <p className="text-sm font-bold text-muted-foreground">جاري تحميل لوحة التحكم...</p>
         </div>
@@ -88,7 +87,7 @@ function DashboardContent({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 border-b border-border-shifa bg-card px-6 flex items-center justify-between relative z-10">
           <h1 className="font-display font-extrabold text-lg text-foreground">
-            لوحة تحكم عيادة شفاء
+            عافي - لوحة التحكم
           </h1>
           {/* User Menu */}
           <div className="flex items-center gap-4">

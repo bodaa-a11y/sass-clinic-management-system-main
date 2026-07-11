@@ -1,8 +1,9 @@
-// CHANGED BY WINDSURF - Themed Cura Sidebar to match Shifa Clinic style
+// AAFI Clinic Management System - Themed Sidebar
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { store } from '@/lib/store';
 import { useTenant } from '@/lib/tenant-context';
@@ -20,7 +21,6 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
-  Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button-redesigned';
 
@@ -133,24 +133,41 @@ export function Sidebar() {
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
     >
-      {/* Logo */}
-      <div className="p-6 border-b border-border-shifa flex items-center justify-between">
+      {/* Logo - AAFI */}
+      <div className="p-4 border-b border-border-shifa flex items-center justify-between">
         {!isCollapsed && (
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="relative w-8 h-8 rounded-lg flex items-center justify-center bg-accent-shifa shadow-sm">
-              <Heart className="w-4.5 h-4.5 text-[#001810]" />
-              <span className="pulse-ring-shifa !inset-[-2px]" />
+          <Link href="/dashboard" className="flex items-center group">
+            <div className="relative flex-shrink-0">
+              <div className="logo-container-glow w-11 h-11 p-1.5">
+                <div className="logo-outer-ring !inset-[-4px]" />
+                <Image
+                  src="/aafi-logo.png"
+                  alt="عافي"
+                  width={32}
+                  height={32}
+                  className="object-contain"
+                />
+              </div>
             </div>
-            <div className="leading-none text-right">
-              <div className="font-display font-bold text-sm text-foreground">شفاء</div>
-              <div className="text-[7px] tracking-[0.2em] font-medium text-muted-foreground">SHIFA SYSTEM</div>
+            <div className="leading-none text-right mr-3">
+              <div className="font-display font-bold text-base text-foreground">عافي</div>
+              <div className="text-[8px] tracking-[0.1em] font-medium text-muted-foreground mt-0.5">AAFI SYSTEM</div>
             </div>
           </Link>
         )}
         {isCollapsed && (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent-shifa shadow-sm mx-auto">
-            <Heart className="w-4.5 h-4.5 text-[#001810]" />
-          </div>
+          <Link href="/dashboard" className="w-11 h-11 mx-auto block relative">
+            <div className="logo-container-glow w-11 h-11 p-1.5">
+              <div className="logo-outer-ring !inset-[-4px]" />
+              <Image
+                src="/aafi-logo.png"
+                alt="عافي"
+                width={32}
+                height={32}
+                className="object-contain"
+              />
+            </div>
+          </Link>
         )}
         
         {!isCollapsed && (
@@ -203,7 +220,7 @@ export function Sidebar() {
       {!isCollapsed && (
         <div className="p-4 border-t border-border-shifa bg-bg-shifa-soft/50">
           <div className="text-[10px] text-muted-foreground text-center font-bold tracking-wider">
-            منصة شفاء الطبية v1.0
+            عافي - نظام إدارة العيادات v1.0
           </div>
         </div>
       )}

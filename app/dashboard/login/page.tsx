@@ -7,12 +7,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
+import Image from 'next/image';
 import { store } from '@/lib/store';
 import { getModulesForFacilityType } from '@/lib/modules-config';
 import { PageTransition } from '@/components/animations/page-transition';
 import { SlideIn } from '@/components/animations/feedback-animations';
 import { LoadingSpinner } from '@/components/animations/loading-states';
-import { Calendar, Lock, Mail, Heart, Sun, Moon } from 'lucide-react';
+import { Lock, Mail, Sun, Moon } from 'lucide-react';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
@@ -120,17 +121,24 @@ export default function LoginPage() {
         )}
 
         <div className="w-full max-w-md relative z-10 space-y-6">
-          {/* Header/Logo */}
+          {/* Header/Logo - AAFI Branding */}
           <div className="text-center">
-            <Link href="/" className="inline-flex items-center gap-3 group mb-4">
-              <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-accent-shifa shadow-lg">
-                <Heart className="w-7 h-7 text-[#001810]" />
-                <span className="pulse-ring-shifa !inset-[-5px]" />
+            <Link href="/" className="inline-flex flex-col items-center gap-3 group mb-5 relative">
+              <div className="logo-container-glow w-28 h-28 p-4">
+                <div className="logo-outer-ring" />
+                <Image
+                  src="/aafi-logo.png"
+                  alt="عافي - نظام إدارة العيادات"
+                  width={90}
+                  height={90}
+                  className="object-contain"
+                  priority
+                />
               </div>
             </Link>
             <h1 className="font-display font-extrabold text-3xl text-foreground mb-1">تسجيل الدخول</h1>
             <p className="text-sm text-muted-foreground">
-              أدخل بيانات الدخول للوصول إلى لوحة تحكم العيادة
+              أدخل بيانات الدخول للوصول إلى لوحة التحكم
             </p>
           </div>
 
@@ -198,6 +206,13 @@ export default function LoginPage() {
                     )}
                   </button>
                 </form>
+
+                {/* Demo credentials hint */}
+                <div className="text-center pt-2 border-t border-border-shifa">
+                  <p className="text-[10px] text-muted-foreground">
+                    بيانات تجريبية: admin@clinic.com / password123
+                  </p>
+                </div>
               </div>
             </div>
           </SlideIn>

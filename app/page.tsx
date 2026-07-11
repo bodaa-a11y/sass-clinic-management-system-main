@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button-redesigned'
 import { store } from '@/lib/store'
 import { 
@@ -13,7 +14,6 @@ import {
   FileText, 
   Shield,
   Calendar,
-  Heart,
   Sun,
   Moon
 } from 'lucide-react'
@@ -70,15 +70,24 @@ export default function HomePage() {
           <div className="absolute inset-0 grid-bg-shifa opacity-30 pointer-events-none" />
           
           <div className="relative flex flex-col items-center text-center space-y-8">
-            {/* Logo */}
-            <div className="relative w-16 h-16 rounded-3xl flex items-center justify-center bg-accent-shifa shadow-lg">
-              <Heart className="w-9 h-9 text-[#001810]" />
-              <span className="pulse-ring-shifa !inset-[-6px]" />
+            {/* Logo - AAFI */}
+            <div className="relative mb-2">
+              <div className="logo-container-glow w-32 h-32 p-4">
+                <div className="logo-outer-ring" />
+                <Image
+                  src="/aafi-logo.png"
+                  alt="عافي - نظام إدارة العيادات"
+                  width={100}
+                  height={100}
+                  className="object-contain"
+                  priority
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
               <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-foreground">
-                منصة إدارة العيادات
+                عافي
               </h1>
               <p className="text-base text-muted-foreground max-w-sm">
                 نظام شامل وإحترافي لإدارة المواعيد والسجلات الطبية وإدارة العيادات
@@ -155,9 +164,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Copyright */}
             <div className="text-xs text-muted-foreground pt-4">
-              © 2026 منصة إدارة العيادات - جميع الحقوق محفوظة
+              © 2026 عافي - نظام إدارة العيادات - جميع الحقوق محفوظة
             </div>
           </div>
         </div>
