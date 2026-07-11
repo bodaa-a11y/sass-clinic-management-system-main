@@ -19,9 +19,11 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button-redesigned';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { SlideIn, HoverScale, PageTransition } from '@/components/ui/motion-redesigned';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card-redesigned';
+import { Badge } from '@/components/ui/badge-redesigned';
+import { PageTransition } from '@/components/animations/page-transition';
+import { SlideIn } from '@/components/animations/feedback-animations';
+import { HoverScale } from '@/components/animations/micro-interactions';
 
 export default function PatientDashboardPage() {
   const router = useRouter();

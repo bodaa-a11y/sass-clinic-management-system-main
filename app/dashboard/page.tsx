@@ -669,11 +669,3 @@ export default function DashboardPage() {
     </PageTransition>
   );
 }
-
-      {/* Today's Appointments - Removed (moved to bottom row) */}
-
-      {/* Recent Patients Table - Removed */}
-    </div>
-    </PageTransition>
-  );
-}

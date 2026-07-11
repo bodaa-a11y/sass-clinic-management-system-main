@@ -12,7 +12,7 @@ import { CommandPalette } from '@/components/search/command-palette';
 import { QuickActionsMenu } from '@/components/quick-actions/quick-actions-menu';
 import { store } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 
 function DashboardContent({ children }: { children: ReactNode }) {
