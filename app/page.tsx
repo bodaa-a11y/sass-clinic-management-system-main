@@ -71,18 +71,15 @@ export default function HomePage() {
           
           <div className="relative flex flex-col items-center text-center space-y-8">
             {/* Logo - AAFI */}
-            <div className="relative mb-2">
-              <div className="logo-container-glow w-32 h-32 p-4">
-                <div className="logo-outer-ring" />
-                <Image
-                  src="/aafi-logo.png"
-                  alt="عافي - نظام إدارة العيادات"
-                  width={100}
-                  height={100}
-                  className="object-contain"
-                  priority
-                />
-              </div>
+            <div className="relative">
+              <Image
+                src="/aafi-logo.png"
+                alt="عافي - نظام إدارة العيادات"
+                width={280}
+                height={280}
+                className="object-contain"
+                priority
+              />
             </div>
 
             <div className="space-y-3">

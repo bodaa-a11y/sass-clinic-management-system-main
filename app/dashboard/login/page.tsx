@@ -123,18 +123,15 @@ export default function LoginPage() {
         <div className="w-full max-w-md relative z-10 space-y-6">
           {/* Header/Logo - AAFI Branding */}
           <div className="text-center">
-            <Link href="/" className="inline-flex flex-col items-center gap-3 group mb-5 relative">
-              <div className="logo-container-glow w-28 h-28 p-4">
-                <div className="logo-outer-ring" />
-                <Image
-                  src="/aafi-logo.png"
-                  alt="عافي - نظام إدارة العيادات"
-                  width={90}
-                  height={90}
-                  className="object-contain"
-                  priority
-                />
-              </div>
+            <Link href="/" className="inline-flex flex-col items-center gap-3 group mb-4">
+              <Image
+                src="/aafi-logo.png"
+                alt="عافي - نظام إدارة العيادات"
+                width={260}
+                height={260}
+                className="object-contain"
+                priority
+              />
             </Link>
             <h1 className="font-display font-extrabold text-3xl text-foreground mb-1">تسجيل الدخول</h1>
             <p className="text-sm text-muted-foreground">

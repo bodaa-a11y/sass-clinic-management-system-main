@@ -136,37 +136,25 @@ export function Sidebar() {
       {/* Logo - AAFI */}
       <div className="p-4 border-b border-border-shifa flex items-center justify-between">
         {!isCollapsed && (
-          <Link href="/dashboard" className="flex items-center group">
-            <div className="relative flex-shrink-0">
-              <div className="logo-container-glow w-11 h-11 p-1.5">
-                <div className="logo-outer-ring !inset-[-4px]" />
-                <Image
-                  src="/aafi-logo.png"
-                  alt="عافي"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                />
-              </div>
-            </div>
-            <div className="leading-none text-right mr-3">
-              <div className="font-display font-bold text-base text-foreground">عافي</div>
-              <div className="text-[8px] tracking-[0.1em] font-medium text-muted-foreground mt-0.5">AAFI SYSTEM</div>
-            </div>
+          <Link href="/dashboard" className="flex items-center gap-2 group">
+            <Image
+              src="/aafi-logo.png"
+              alt="عافي"
+              width={140}
+              height={50}
+              className="object-contain"
+            />
           </Link>
         )}
         {isCollapsed && (
-          <Link href="/dashboard" className="w-11 h-11 mx-auto block relative">
-            <div className="logo-container-glow w-11 h-11 p-1.5">
-              <div className="logo-outer-ring !inset-[-4px]" />
-              <Image
-                src="/aafi-logo.png"
-                alt="عافي"
-                width={32}
-                height={32}
-                className="object-contain"
-              />
-            </div>
+          <Link href="/dashboard" className="w-10 h-10 mx-auto block relative">
+            <Image
+              src="/aafi-logo.png"
+              alt="عافي"
+              width={38}
+              height={38}
+              className="object-contain mx-auto"
+            />
           </Link>
         )}
         
