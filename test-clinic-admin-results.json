@@ -1,0 +1,98 @@
+{
+  "total": 13,
+  "passed": 7,
+  "failed": 6,
+  "tests": [
+    {
+      "testName": "Clinic Admin Login",
+      "passed": true,
+      "message": "Successfully logged in as Clinic Admin",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:17.696Z"
+    },
+    {
+      "testName": "Clinic Admin Dashboard - Page Load",
+      "passed": true,
+      "message": "Dashboard loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:21.788Z"
+    },
+    {
+      "testName": "Clinic Admin Dashboard - UI Elements",
+      "passed": true,
+      "message": "Found 11 buttons on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:21.803Z"
+    },
+    {
+      "testName": "Staff Management - Staff Section",
+      "passed": true,
+      "message": "Staff section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:23.265Z"
+    },
+    {
+      "testName": "Staff Management - UI Elements",
+      "passed": true,
+      "message": "Found 11 buttons on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:23.277Z"
+    },
+    {
+      "testName": "Specialties Management - Specialties Section",
+      "passed": true,
+      "message": "Specialties section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:24.699Z"
+    },
+    {
+      "testName": "Services Management - Services Section",
+      "passed": false,
+      "message": "Services section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:25.811Z"
+    },
+    {
+      "testName": "Departments Management - Departments Section",
+      "passed": false,
+      "message": "Departments section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:26.927Z"
+    },
+    {
+      "testName": "Role Permissions - Permissions Section",
+      "passed": false,
+      "message": "Permissions section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:28.010Z"
+    },
+    {
+      "testName": "Role Permissions - Doctor Permissions",
+      "passed": false,
+      "message": "Doctor permissions not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:28.011Z"
+    },
+    {
+      "testName": "Role Permissions - Receptionist Permissions",
+      "passed": false,
+      "message": "Receptionist permissions not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:28.011Z"
+    },
+    {
+      "testName": "Role Permissions - Clinic Admin Permissions",
+      "passed": false,
+      "message": "Clinic Admin permissions not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:28.012Z"
+    },
+    {
+      "testName": "Logout - Direct Navigation",
+      "passed": true,
+      "message": "Can access login page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:03:29.477Z"
+    }
+  ]
+}

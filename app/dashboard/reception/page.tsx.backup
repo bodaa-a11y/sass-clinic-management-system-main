@@ -1,0 +1,1658 @@
+'use client'
+
+import { useState, useEffect, useCallback, memo } from 'react'
+import { apiFetch } from '@/lib/api-client'
+import { store } from '@/lib/store'
+import { Button } from '@/components/ui/button-redesigned'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card-redesigned'
+import { Badge } from '@/components/ui/badge-redesigned'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input-redesigned'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs-redesigned'
+import { toast } from 'sonner'
+import { Calendar, Clock, Check, X, UserPlus, DollarSign, Phone, Users, Stethoscope, Activity, Plus, Bell, Shield, Heart, FileText, Search } from 'lucide-react'
+import { PatientProgressStepper } from '@/components/patient-progress-stepper'
+import { useRealtimeData } from '@/lib/use-realtime-data'
+import { useTenant } from '@/lib/tenant-context'
+import { useAppointmentsRealtime } from './hooks/use-appointments-realtime'
+import { PageTransition } from '@/components/animations/page-transition'
+import { SlideIn } from '@/components/animations/feedback-animations'
+import { HoverScale } from '@/components/animations/micro-interactions'
+import { MedicalDocumentUploadDialog } from './components/medical-document-upload-dialog'
+import { WeeklyCalendar } from './components/weekly-calendar'
+import { AppointmentCard } from './components/appointment-card'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { useTranslation, Language } from '@/lib/i18n'
+import { Globe } from 'lucide-react'
+
+interface Patient {
+  id: string
+  fullName: string
+  phone: string
+  email?: string
+  dateOfBirth?: string
+  address?: string
+  insuranceNumber?: string
+  insuranceProvider?: string
+  medicalHistory?: string
+  currentMedications?: string
+  emergencyContact?: string
+  emergencyPhone?: string
+}
+
+interface Appointment {
+  id: string
+  patientId: string
+  patientName?: string
+  patientPhone?: string
+  startTime: string
+  appointmentDate?: string
+  date?: string
+  status: 'pending' | 'confirmed' | 'in-waiting-room' | 'in-progress' | 'done' | 'cancelled' | 'no-show'
+  doctorId?: string
+  doctorName?: string
+  isRecurring?: boolean
+  recurringPattern?: 'daily' | 'weekly' | 'monthly'
+  recurringEndDate?: string
+  priority?: 'normal' | 'priority' | 'emergency'
+}
+
+interface InsuranceVerification {
+  patientId: string
+  patientName: string
+  insuranceProvider: string
+  insuranceNumber: string
+  status: 'active' | 'inactive' | 'expired' | 'pending'
+  coverageType?: string
+  validUntil?: string
+  verifiedAt?: string
+}
+
+interface PatientCRM {
+  id: string
+  patientId: string
+  patientName: string
+  followUpDate?: string
+  followUpNotes?: string
+  loyaltyPoints?: number
+  lastVisit?: string
+  status: 'active' | 'inactive' | 'follow-up-needed'
+}
+
+interface LoyaltyProgram {
+  id: string
+  patientId: string
+  patientName: string
+  points: number
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum'
+  rewards: string[]
+  joinedDate: string
+}
+
+interface MedicalDocument {
+  id: string
+  patientId: string
+  patientName: string
+  documentType: 'prescription' | 'lab-result' | 'x-ray' | 'mri' | 'ct-scan' | 'ultrasound' | 'insurance' | 'other'
+  title: string
+  description?: string
+  fileUrl: string
+  fileName: string
+  status: 'pending' | 'verified' | 'rejected'
+  createdAt: string
+}
+
+interface SlotInfo {
+  time: string
+  isAvailable: boolean
+  reason?: 'booked' | 'buffer' | 'outside_hours'
+}
+
+/**
+ * Smart appointment sorting algorithm
+ * Priority: Status → Time → Priority
+ */
+function sortAppointments(appointments: Appointment[]): Appointment[] {
+  const statusOrder: Record<string, number> = {
+    pending: 0,
+    confirmed: 1,
+    'in-waiting-room': 2,
+    'in-progress': 3,
+    done: 4,
+    cancelled: 5,
+    'no-show': 6,
+  }
+
+  const priorityOrder: Record<string, number> = {
+    emergency: 0,
+    priority: 1,
+    normal: 2,
+  }
+
+  return [...appointments].sort((a, b) => {
+    // Primary: Status
+    const statusDiff = statusOrder[a.status] - statusOrder[b.status]
+    if (statusDiff !== 0) return statusDiff
+
+    // Secondary: Time (earliest first)
+    const timeDiff = a.startTime.localeCompare(b.startTime)
+    if (timeDiff !== 0) return timeDiff
+
+    // Tertiary: Priority
+    const priorityDiff = priorityOrder[(a as any).priority || 'normal'] - priorityOrder[(b as any).priority || 'normal']
+    return priorityDiff
+  })
+}
+
+interface Invoice {
+  id: string
+  patientId: string
+  patientName: string
+  totalAmount: string
+  status: 'pending' | 'paid' | 'overdue'
+  dueDate: string
+}
+
+interface Doctor {
+  id: string
+  name: string
+  role: string
+}
+
+export default function UnifiedReceptionPage() {
+  const { facilityType } = useTenant()
+  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false)
+  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false)
+  const [isInsuranceVerificationDialogOpen, setIsInsuranceVerificationDialogOpen] = useState(false)
+  const [insuranceVerificationForm, setInsuranceVerificationForm] = useState({
+    patientId: '',
+    patientName: '',
+    insuranceProvider: '',
+    insuranceNumber: ''
+  })
+  // CRM and Loyalty states removed temporarily
+  const [isDocumentUploadDialogOpen, setIsDocumentUploadDialogOpen] = useState(false)
+  const [documentForm, setDocumentForm] = useState({
+    patientId: '',
+    patientName: '',
+    documentName: '',
+    documentType: 'other' as 'prescription' | 'lab-result' | 'x-ray' | 'mri' | 'insurance' | 'other'
+  })
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [patientForm, setPatientForm] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    dateOfBirth: '',
+    address: '',
+    insuranceNumber: '',
+    insuranceProvider: '',
+    medicalHistory: '',
+    currentMedications: '',
+    emergencyContact: '',
+    emergencyPhone: ''
+  })
+  const [appointmentForm, setAppointmentForm] = useState({
+    patientId: '',
+    doctorId: '',
+    date: '',
+    time: '',
+    notes: '',
+    isRecurring: false,
+    recurringPattern: 'weekly' as 'daily' | 'weekly' | 'monthly',
+    recurringCount: 1,
+    recurringEndDate: ''
+  })
+  const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'today' | 'week' | 'month' | 'pending' | 'all'>('today')
+  const [sseAppointments, setSseAppointments] = useState<Appointment[] | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<'list' | 'weekly'>('list')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [isAppointmentDetailOpen, setIsAppointmentDetailOpen] = useState(false)
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('clinic-language') as Language
+      return saved || 'ar'
+    }
+    return 'ar'
+  })
+  const { t } = useTranslation(language)
+  const [suggestedSlots, setSuggestedSlots] = useState<any[]>([])
+
+  useEffect(() => {
+    const user = store.getUser()
+    if (user?.clinicId) {
+      setClinicId(user.clinicId)
+    }
+  }, [])
+
+  // Save language to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clinic-language', language)
+    }
+  }, [language])
+
+  // Smart Scheduling: Suggest alternative slots
+  const handleSuggestAlternativeSlots = async () => {
+    if (!clinicId || !appointmentForm.doctorId || !appointmentForm.date) return
+
+    try {
+      // Get slots for the next 7 days
+      const alternativeDates: string[] = []
+      const currentDate = new Date(appointmentForm.date)
+      
+      for (let i = 1; i <= 7; i++) {
+        const nextDate = new Date(currentDate)
+        nextDate.setDate(nextDate.getDate() + i)
+        alternativeDates.push(nextDate.toISOString().split('T')[0])
+      }
+
+      const allSlots: any[] = []
+      
+      for (const date of alternativeDates) {
+        const response = await apiFetch(`/clinics/${clinicId}/slots?doctorId=${appointmentForm.doctorId}&date=${date}`)
+        if (response.ok) {
+          const data = await response.json()
+          allSlots.push(...data.data.map((slot: any) => ({ ...slot, date })))
+        }
+      }
+
+      // Sort by date and time, take first 5
+      const sortedSlots = allSlots
+        .sort((a, b) => {
+          const dateCompare = a.date.localeCompare(b.date)
+          if (dateCompare !== 0) return dateCompare
+          return a.startTime.localeCompare(b.startTime)
+        })
+        .slice(0, 5)
+
+      setSuggestedSlots(sortedSlots)
+    } catch {
+      toast.error('فشل في جلب الأوقات البديلة')
+    }
+  }
+
+  // Smart Reminder: Send appointment reminder
+  const handleSendSmartReminder = async (appointment: Appointment) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/appointments/${appointment.id}/remind`, {
+        method: 'POST',
+      })
+
+      if (response.ok) {
+        toast.success('تم إرسال التذكير بنجاح')
+      } else {
+        toast.error('فشل إرسال التذكير')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء إرسال التذكير')
+    }
+  }
+
+  // Fetch available slots when doctor or date changes
+  useEffect(() => {
+    const fetchSlots = async () => {
+      if (!clinicId || !appointmentForm.doctorId || !appointmentForm.date) {
+        setAvailableSlots([])
+        return
+      }
+
+      setSlotsLoading(true)
+      try {
+        const response = await apiFetch(
+          `/clinics/${clinicId}/slots?doctor_id=${appointmentForm.doctorId}&date=${appointmentForm.date}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableSlots(data.data.slots || [])
+        } else {
+          setAvailableSlots([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch slots:', error)
+        setAvailableSlots([])
+      } finally {
+        setSlotsLoading(false)
+      }
+    }
+
+    fetchSlots()
+  }, [clinicId, appointmentForm.doctorId, appointmentForm.date])
+
+  // Initial data fetch (no polling since we use SSE)
+  const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = useRealtimeData<Appointment[]>(
+    clinicId ? `/clinics/${clinicId}/appointments` : '',
+    { interval: 0, enabled: false } // Disabled completely, we use SSE
+  )
+
+  // Fetch initial data once
+  useEffect(() => {
+    if (clinicId) {
+      refetchAppointments()
+    }
+  }, [clinicId, refetchAppointments])
+
+  // SSE for real-time updates - receives data directly
+  const handleSseData = useCallback((data: any[]) => {
+    setSseAppointments(data)
+  }, [])
+
+  useAppointmentsRealtime(clinicId, handleSseData)
+
+  // Use SSE data if available, otherwise use fetched data
+  const currentAppointments = sseAppointments || appointments
+
+  // Apply smart sorting
+  const sortedAppointments = currentAppointments ? sortAppointments(currentAppointments) : []
+
+  // Filter appointments based on active tab and search
+  const filteredAppointments = sortedAppointments.filter((appointment) => {
+    const today = new Date().toISOString().split('T')[0]
+    const appointmentDate = appointment.appointmentDate || appointment.date
+    if (!appointmentDate) return false
+    const aptDate = new Date(appointmentDate)
+
+    // Tab filtering
+    let tabMatch = false
+    switch (activeTab) {
+      case 'today':
+        tabMatch = appointmentDate === today
+        break
+      case 'week':
+        const weekStart = new Date()
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekEnd.getDate() + 6)
+        tabMatch = aptDate >= weekStart && aptDate <= weekEnd
+        break
+      case 'month':
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        const monthEnd = new Date()
+        monthEnd.setMonth(monthEnd.getMonth() + 1)
+        monthEnd.setDate(0)
+        tabMatch = aptDate >= monthStart && aptDate <= monthEnd
+        break
+      case 'pending':
+        tabMatch = appointment.status === 'pending'
+        break
+      case 'all':
+        tabMatch = true
+        break
+    }
+
+    if (!tabMatch) return false
+
+    // Search filtering
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const matchesPatient = appointment.patientName?.toLowerCase().includes(query)
+      const matchesDoctor = appointment.doctorName?.toLowerCase().includes(query)
+      const matchesDate = appointmentDate.includes(query)
+      if (!matchesPatient && !matchesDoctor && !matchesDate) return false
+    }
+
+    // Status filtering
+    if (statusFilter !== 'all' && appointment.status !== statusFilter) return false
+
+    // Priority filtering
+    if (priorityFilter !== 'all' && appointment.priority !== priorityFilter) return false
+
+    return true
+  })
+
+  // Count pending appointments
+  const pendingCount = currentAppointments ? currentAppointments.filter(a => a.status === 'pending').length : 0
+
+  // Count appointments needing check-in (today's confirmed appointments not yet in waiting room)
+  const today = new Date().toISOString().split('T')[0]
+  const needsCheckInCount = currentAppointments ? currentAppointments.filter(
+    a => a.status === 'confirmed' && (a.appointmentDate || a.date) === today
+  ).length : 0
+
+  // Pagination logic
+  const totalPages = Math.ceil((filteredAppointments?.length || 0) / itemsPerPage)
+  const paginatedAppointments = filteredAppointments?.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ) || []
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter, priorityFilter, activeTab])
+
+  const { data: patients, isLoading: patientsLoading } = useRealtimeData<Patient[]>(
+    clinicId ? `/clinics/${clinicId}/patients` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const { data: invoices, isLoading: invoicesLoading } = useRealtimeData<Invoice[]>(
+    clinicId ? `/clinics/${clinicId}/invoices` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  // CRM and Loyalty data removed temporarily
+
+  const { data: medicalDocuments, isLoading: documentsLoading, refetch: refetchDocuments } = useRealtimeData<MedicalDocument[]>(
+    clinicId ? `/clinics/${clinicId}/medical-documents` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const { data: doctors, isLoading: doctorsLoading } = useRealtimeData<Doctor[]>(
+    clinicId ? `/clinics/${clinicId}/staff?role=doctor` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const handleCreatePatient = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/patients`, {
+        method: 'POST',
+        body: JSON.stringify(patientForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة المريض بنجاح')
+        setPatientForm({
+          fullName: '',
+          phone: '',
+          email: '',
+          dateOfBirth: '',
+          address: '',
+          insuranceNumber: '',
+          insuranceProvider: '',
+          medicalHistory: '',
+          currentMedications: '',
+          emergencyContact: '',
+          emergencyPhone: ''
+        })
+        setIsPatientDialogOpen(false)
+      } else {
+        toast.error('فشل إضافة المريض')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء إضافة المريض')
+    }
+  }
+
+  const handleCreateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    // Validate doctorId
+    if (!appointmentForm.doctorId) {
+      toast.error('يرجى اختيار طبيب')
+      return
+    }
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/appointments`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...appointmentForm,
+          doctorId: appointmentForm.doctorId,
+          status: 'pending',
+          recurringCount: appointmentForm.isRecurring ? appointmentForm.recurringCount : undefined,
+          recurringPattern: appointmentForm.isRecurring ? appointmentForm.recurringPattern : undefined,
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تم حجز الموعد بنجاح')
+        refetchAppointments()
+        setSseAppointments(null) // Reset to use fetched data
+        setAppointmentForm({
+          patientId: '',
+          doctorId: '',
+          date: '',
+          time: '',
+          notes: '',
+          isRecurring: false,
+          recurringPattern: 'weekly',
+          recurringCount: 1,
+          recurringEndDate: ''
+        })
+        setAvailableSlots([])
+        setIsAppointmentDialogOpen(false)
+      } else {
+        const error = await response.json()
+        if (error.suggested_slots && error.suggested_slots.length > 0) {
+          toast.error(`${error.error || 'فشل حجز الموعد'} - الأوقات المتاحة: ${error.suggested_slots.join(', ')}`)
+        } else {
+          toast.error(error.error || 'فشل حجز الموعد')
+        }
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء حجز الموعد')
+    }
+  }
+
+  const handleConfirmAppointment = async (appointmentId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/appointments/${appointmentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'confirmed' })
+      })
+
+      if (response.ok) {
+        toast.success('تم تأكيد الموعد')
+        refetchAppointments()
+        setSseAppointments(null)
+      }
+    } catch (error) {
+      toast.error('فشل تأكيد الموعد')
+    }
+  }
+
+  const handleCheckIn = async (appointmentId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/appointments/${appointmentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'in-waiting-room' })
+      })
+
+      if (response.ok) {
+        toast.success('تم تسجيل الوصول')
+        refetchAppointments()
+        setSseAppointments(null)
+      }
+    } catch (error) {
+      toast.error('فشل تسجيل الوصول')
+    }
+  }
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/appointments/${appointmentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'cancelled' })
+      })
+
+      if (response.ok) {
+        toast.success('تم إلغاء الموعد')
+        refetchAppointments()
+        setSseAppointments(null)
+      }
+    } catch (error) {
+      toast.error('فشل إلغاء الموعد')
+    }
+  }
+
+  const handleSendReminder = async (appointment: Appointment) => {
+    if (!clinicId) return
+
+    try {
+      // In a real implementation, this would call an SMS/Email service
+      // For now, we'll simulate it with a toast notification
+      const patient = patients?.find(p => p.id === appointment.patientId)
+
+      toast.success('تم إرسال التذكير بنجاح', {
+        description: `تم إرسال تذكير إلى ${patient?.fullName || appointment.patientName || 'المريض'} على الهاتف ${patient?.phone || appointment.patientPhone || 'غير متوفر'}`
+      })
+      
+      // In production, you would call your SMS/Email API here:
+      // await apiFetch(`/clinics/${clinicId}/appointments/${appointment.id}/reminder`, {
+      //   method: 'POST',
+      //   body: JSON.stringify({ type: 'sms' })
+      // })
+    } catch (error) {
+      toast.error('فشل إرسال التذكير')
+    }
+  }
+
+  const handleSendBulkReminders = async () => {
+    if (!clinicId) return
+
+    if (!patients) {
+      toast.error('لا توجد بيانات المرضى')
+      return
+    }
+
+    const confirmedAppointments = currentAppointments?.filter(apt => apt.status === 'confirmed') || []
+
+    if (confirmedAppointments.length === 0) {
+      toast.warning('لا توجد مواعيد مؤكدة لإرسال التذكيرات')
+      return
+    }
+
+    try {
+      // In a real implementation, this would call an SMS/Email service
+      // For now, we'll simulate it with a toast notification
+      toast.success(`تم إرسال ${confirmedAppointments.length} تذكير بنجاح`, {
+        description: `تم إرسال تذكيرات إلى جميع المواعيد المؤكدة`
+      })
+      
+      // In production, you would call your SMS/Email API here:
+      // await apiFetch(`/clinics/${clinicId}/appointments/bulk-reminders`, {
+      //   method: 'POST',
+      //   body: JSON.stringify({ status: 'confirmed' })
+      // })
+    } catch (error) {
+      toast.error('فشل إرسال التذكيرات')
+    }
+  }
+
+  const handleAppointmentMove = async (appointmentId: string, newDate: string, newTime: string) => {
+    if (!clinicId) return
+
+    // Get the appointment data to send required fields
+    const appointment = currentAppointments?.find(a => a.id === appointmentId)
+    if (!appointment) {
+      toast.error('الموعد غير موجود')
+      return
+    }
+
+    // Check if doctorId exists
+    if (!appointment.doctorId) {
+      toast.error('الموعد ليس مرتبطًا بطبيب')
+      return
+    }
+
+    try {
+      // If changing date, reset status to pending to avoid validation errors
+      const currentDate = appointment.appointmentDate || appointment.date
+      const isChangingDate = currentDate !== newDate
+      const newStatus = isChangingDate ? 'pending' : appointment.status
+
+      const response = await apiFetch(`/clinics/${clinicId}/appointments/${appointmentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          appointmentDate: newDate,
+          startTime: newTime,
+          status: newStatus,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('تم تغيير الموعد بنجاح')
+        refetchAppointments()
+        setSseAppointments(null)
+      } else {
+        const error = await response.json()
+        console.error('Appointment move error:', error)
+        toast.error(error.error || error.details || 'فشل تغيير الموعد')
+      }
+    } catch (error) {
+      console.error('Appointment move exception:', error)
+      toast.error('فشل تغيير الموعد')
+    }
+  }
+
+  const handleViewAppointmentDetails = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    setIsAppointmentDetailOpen(true)
+  }
+
+  const handleVerifyInsurance = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      // Simulate insurance verification API call
+      const response = await apiFetch(`/clinics/${clinicId}/insurance-verification`, {
+        method: 'POST',
+        body: JSON.stringify({
+          patientId: insuranceVerificationForm.patientId,
+          patientName: insuranceVerificationForm.patientName,
+          insuranceProvider: insuranceVerificationForm.insuranceProvider,
+          insuranceNumber: insuranceVerificationForm.insuranceNumber
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تم التحقق من التأمين بنجاح', {
+          description: 'التغطية التأمينية سارية المفعول'
+        })
+        setIsInsuranceVerificationDialogOpen(false)
+        setInsuranceVerificationForm({
+          patientId: '',
+          patientName: '',
+          insuranceProvider: '',
+          insuranceNumber: ''
+        })
+      } else {
+        toast.error('فشل التحقق من التأمين', {
+          description: 'يرجى التحقق من بيانات التأمين'
+        })
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء التحقق من التأمين')
+    }
+  }
+
+  const handleUploadDocument = async (data: { patientId: string; documentType: string; title: string; description?: string; file?: File; textContent?: string }) => {
+    if (!clinicId) return
+
+    try {
+      const formData = new FormData()
+      formData.append('patientId', data.patientId)
+      formData.append('documentType', data.documentType)
+      formData.append('title', data.title)
+      if (data.description) {
+        formData.append('description', data.description)
+      }
+      if (data.file) {
+        formData.append('file', data.file)
+      }
+      if (data.textContent) {
+        formData.append('textContent', data.textContent)
+      }
+
+      const response = await fetch(`/api/clinics/${clinicId}/medical-documents/upload`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (response.ok) {
+        toast.success('تم رفع المستند بنجاح')
+        refetchDocuments()
+      } else {
+        toast.error('فشل رفع المستند')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء رفع المستند')
+    }
+  }
+
+  return (
+    <PageTransition>
+      <div className={`space-y-6 ${language === 'ar' ? 'rtl' : 'ltr'}`}>
+        {/* Header with Theme Toggle */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('receptionDashboard')}</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+              className="flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              {language === 'ar' ? 'EN' : 'عربي'}
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+        {/* Quick Actions */}
+        <SlideIn direction="up" delay={0.1}>
+          <div className="flex gap-4">
+            <Dialog open={isPatientDialogOpen} onOpenChange={setIsPatientDialogOpen}>
+              <DialogTrigger asChild>
+                <HoverScale>
+                  <Button>
+                    <UserPlus className="w-4 h-4 ml-2" />
+                    مريض جديد
+                  </Button>
+                </HoverScale>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>إضافة مريض جديد</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreatePatient} className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div>
+                    <Label htmlFor="fullName">الاسم الكامل *</Label>
+                    <Input
+                      id="fullName"
+                      value={patientForm.fullName}
+                      onChange={(e) => setPatientForm({ ...patientForm, fullName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">رقم الهاتف *</Label>
+                    <Input
+                      id="phone"
+                      value={patientForm.phone}
+                      onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">البريد الإلكتروني</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={patientForm.email}
+                      onChange={(e) => setPatientForm({ ...patientForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dateOfBirth">تاريخ الميلاد</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={patientForm.dateOfBirth}
+                      onChange={(e) => setPatientForm({ ...patientForm, dateOfBirth: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="address">العنوان</Label>
+                    <Input
+                      id="address"
+                      value={patientForm.address}
+                      onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="insuranceNumber">رقم التأمين</Label>
+                    <Input
+                      id="insuranceNumber"
+                      value={patientForm.insuranceNumber}
+                      onChange={(e) => setPatientForm({ ...patientForm, insuranceNumber: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="insuranceProvider">شركة التأمين</Label>
+                    <Input
+                      id="insuranceProvider"
+                      value={patientForm.insuranceProvider}
+                      onChange={(e) => setPatientForm({ ...patientForm, insuranceProvider: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="medicalHistory">التاريخ الطبي</Label>
+                    <Textarea
+                      id="medicalHistory"
+                      value={patientForm.medicalHistory}
+                      onChange={(e) => setPatientForm({ ...patientForm, medicalHistory: e.target.value })}
+                      placeholder="أي حالات طبية سابقة، حساسية، إلخ..."
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="currentMedications">الأدوية الحالية</Label>
+                    <Textarea
+                      id="currentMedications"
+                      value={patientForm.currentMedications}
+                      onChange={(e) => setPatientForm({ ...patientForm, currentMedications: e.target.value })}
+                      placeholder="الأدوية التي يتناولها المريض حالياً..."
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="emergencyContact">جهة اتصال للطوارئ</Label>
+                    <Input
+                      id="emergencyContact"
+                      value={patientForm.emergencyContact}
+                      onChange={(e) => setPatientForm({ ...patientForm, emergencyContact: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="emergencyPhone">هاتف الطوارئ</Label>
+                    <Input
+                      id="emergencyPhone"
+                      value={patientForm.emergencyPhone}
+                      onChange={(e) => setPatientForm({ ...patientForm, emergencyPhone: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={() => setIsPatientDialogOpen(false)}>
+                      إلغاء
+                    </Button>
+                    <Button type="submit">إضافة</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAppointmentDialogOpen} onOpenChange={setIsAppointmentDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Calendar className="w-4 h-4 ml-2" />
+                  حجز موعد
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>حجز موعد جديد</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateAppointment} className="space-y-4">
+                  <div>
+                    <Label htmlFor="patientId">المريض *</Label>
+                    <Select value={appointmentForm.patientId} onValueChange={(value) => setAppointmentForm({ ...appointmentForm, patientId: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر المريض" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {patients?.map((patient) => (
+                          <SelectItem key={patient.id} value={patient.id}>
+                            {patient.fullName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="doctorId">الطبيب *</Label>
+                    <Select value={appointmentForm.doctorId} onValueChange={(value) => setAppointmentForm({ ...appointmentForm, doctorId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الطبيب" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {doctors?.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </SelectItem>
+                      ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="date">التاريخ *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={appointmentForm.date}
+                    onChange={(e) => setAppointmentForm({ ...appointmentForm, date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="time">الوقت *</Label>
+                  {slotsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Clock className="w-4 h-4 animate-spin" />
+                      جاري تحميل المواعيد...
+                    </div>
+                  ) : availableSlots.length > 0 ? (
+                    <Select
+                      value={appointmentForm.time}
+                      onValueChange={(value) => setAppointmentForm({ ...appointmentForm, time: value })}
+                      disabled={!appointmentForm.doctorId || !appointmentForm.date}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الوقت المتاح" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSlots.map((slot) => (
+                          <SelectItem
+                            key={slot.time}
+                            value={slot.time}
+                            disabled={!slot.isAvailable}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{slot.time}</span>
+                              {!slot.isAvailable && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {slot.reason === 'booked' ? 'محجوز' : slot.reason === 'buffer' ? 'فترة انتظار' : 'غير متاح'}
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : appointmentForm.doctorId && appointmentForm.date ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-gray-500">
+                        لا توجد مواعيد متاحة لهذا اليوم
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSuggestAlternativeSlots}
+                        className="w-full"
+                      >
+                        <Calendar className="w-4 h-4 ml-2" />
+                        عرض أوقات بديلة (7 أيام)
+                      </Button>
+                      {suggestedSlots.length > 0 && (
+                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">الأوقات البديلة المقترحة:</p>
+                          <div className="space-y-2">
+                            {suggestedSlots.map((slot, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                  setAppointmentForm({ ...appointmentForm, date: slot.date, time: slot.startTime })
+                                  setSuggestedSlots([])
+                                }}
+                                className="w-full text-right p-2 bg-white dark:bg-slate-800 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                              >
+                                <div className="text-sm font-medium">{slot.date}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">{slot.startTime}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">
+                      اختر الطبيب والتاريخ أولاً
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="notes">ملاحظات</Label>
+                  <Textarea
+                    id="notes"
+                    value={appointmentForm.notes}
+                    onChange={(e) => setAppointmentForm({ ...appointmentForm, notes: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isRecurring"
+                    checked={appointmentForm.isRecurring}
+                    onChange={(e) => setAppointmentForm({ ...appointmentForm, isRecurring: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="isRecurring" className="cursor-pointer">موعد متكرر</Label>
+                </div>
+                {appointmentForm.isRecurring && (
+                  <>
+                    <div>
+                      <Label htmlFor="recurringPattern">نمط التكرار</Label>
+                    <Select value={appointmentForm.recurringPattern} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setAppointmentForm({ ...appointmentForm, recurringPattern: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">يومي</SelectItem>
+                        <SelectItem value="weekly">أسبوعي</SelectItem>
+                        <SelectItem value="monthly">شهري</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="recurringCount">عدد التكرارات (1-52)</Label>
+                      <Input
+                        id="recurringCount"
+                        type="number"
+                        min="1"
+                        max="52"
+                        value={appointmentForm.recurringCount}
+                        onChange={(e) => setAppointmentForm({ ...appointmentForm, recurringCount: parseInt(e.target.value) || 1 })}
+                        className="mt-2"
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsAppointmentDialogOpen(false)}>
+                    إلغاء
+                  </Button>
+                  <Button type="submit">حجز الموعد</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+            <Dialog open={isInsuranceVerificationDialogOpen} onOpenChange={setIsInsuranceVerificationDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Shield className="w-4 h-4 ml-2" />
+                  التحقق من التأمين
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>التحقق من التأمين</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleVerifyInsurance} className="space-y-4">
+                  <div>
+                    <Label htmlFor="patientName">اسم المريض *</Label>
+                    <Input
+                      id="patientName"
+                      value={insuranceVerificationForm.patientName}
+                      onChange={(e) => setInsuranceVerificationForm({ ...insuranceVerificationForm, patientName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="insuranceProvider">شركة التأمين *</Label>
+                    <Input
+                      id="insuranceProvider"
+                      value={insuranceVerificationForm.insuranceProvider}
+                      onChange={(e) => setInsuranceVerificationForm({ ...insuranceVerificationForm, insuranceProvider: e.target.value })}
+                      placeholder="مثال: التأمين التعاوني، بوبا"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="insuranceNumber">رقم التأمين *</Label>
+                    <Input
+                      id="insuranceNumber"
+                      value={insuranceVerificationForm.insuranceNumber}
+                      onChange={(e) => setInsuranceVerificationForm({ ...insuranceVerificationForm, insuranceNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsInsuranceVerificationDialogOpen(false)}>
+                      إلغاء
+                    </Button>
+                    <Button type="submit">التحقق</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </SlideIn>
+
+        <Tabs defaultValue="appointments" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="appointments" className="text-xs sm:text-sm">{t('appointments')}</TabsTrigger>
+            <TabsTrigger value="patients" className="text-xs sm:text-sm">{t('patients')}</TabsTrigger>
+            <TabsTrigger value="crm" className="text-xs sm:text-sm">{t('crm')}</TabsTrigger>
+            <TabsTrigger value="insurance" className="text-xs sm:text-sm">{t('insurance')}</TabsTrigger>
+            <TabsTrigger value="invoices" className="text-xs sm:text-sm">{t('invoices')}</TabsTrigger>
+            <TabsTrigger value="documents" className="text-xs sm:text-sm">{t('documents')}</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="appointments">
+            {/* Pending Actions Section */}
+            {(pendingCount > 0 || needsCheckInCount > 0) && (
+              <Card className="mb-4 border-2 border-orange-200 bg-orange-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-900">
+                    <Activity className="w-5 h-5" />
+                    العمليات المعلقة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {pendingCount > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-200">
+                        <div>
+                          <p className="font-semibold text-gray-900">موعد يحتاج تأكيد</p>
+                          <p className="text-sm text-gray-600">{pendingCount} موعد</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setActiveTab('pending')}
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          عرض
+                        </Button>
+                      </div>
+                    )}
+                    {needsCheckInCount > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-200">
+                        <div>
+                          <p className="font-semibold text-gray-900">موعد يحتاج تسجيل وصول</p>
+                          <p className="text-sm text-gray-600">{needsCheckInCount} موعد</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => setActiveTab('today')}
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          عرض
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    المواعيد ({currentAppointments?.length || 0})
+                    {pendingCount > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {pendingCount} قيد الانتظار
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'list' ? 'default' : 'outline'}
+                      onClick={() => setViewMode('list')}
+                    >
+                      قائمة
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={viewMode === 'weekly' ? 'default' : 'outline'}
+                      onClick={() => setViewMode('weekly')}
+                    >
+                      جدول أسبوعي
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleSendBulkReminders}>
+                      <Bell className="w-4 h-4 ml-2" />
+                      إرسال تذكيرات
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                    <div className="relative flex-1">
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="بحث باسم المريض، الطبيب، أو التاريخ..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pr-10"
+                    />
+                  </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="الحالة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الحالات</SelectItem>
+                        <SelectItem value="pending">قيد الانتظار</SelectItem>
+                        <SelectItem value="confirmed">مؤكد</SelectItem>
+                        <SelectItem value="in-waiting-room">في الانتظار</SelectItem>
+                        <SelectItem value="in-progress">جاري الفحص</SelectItem>
+                        <SelectItem value="done">منجز</SelectItem>
+                        <SelectItem value="cancelled">ملغي</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="الأولوية" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الأولويات</SelectItem>
+                        <SelectItem value="normal">عادية</SelectItem>
+                        <SelectItem value="priority">مفضلة</SelectItem>
+                        <SelectItem value="emergency">طارئة</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={activeTab === 'today' ? 'default' : 'outline'}
+                      onClick={() => setActiveTab('today')}
+                    >
+                      اليوم
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeTab === 'week' ? 'default' : 'outline'}
+                      onClick={() => setActiveTab('week')}
+                    >
+                      الأسبوع
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeTab === 'month' ? 'default' : 'outline'}
+                      onClick={() => setActiveTab('month')}
+                    >
+                      الشهر
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeTab === 'pending' ? 'default' : 'outline'}
+                      onClick={() => setActiveTab('pending')}
+                    >
+                      قيد الانتظار
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={activeTab === 'all' ? 'default' : 'outline'}
+                      onClick={() => setActiveTab('all')}
+                    >
+                      الكل
+                    </Button>
+                  </div>
+                </div>
+                {appointmentsLoading ? (
+                  <div className="text-center py-12">جاري التحميل...</div>
+                ) : !filteredAppointments || filteredAppointments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      لا توجد مواعيد
+                    </h3>
+                  </div>
+                ) : (
+                <>
+                  {viewMode === 'weekly' ? (
+                    <WeeklyCalendar
+                      appointments={filteredAppointments}
+                      onAppointmentMove={handleAppointmentMove}
+                    />
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        {paginatedAppointments.map((appointment) => (
+                          <AppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            onConfirm={handleConfirmAppointment}
+                            onCancel={handleCancelAppointment}
+                            onCheckIn={handleCheckIn}
+                            onSendReminder={handleSendReminder}
+                            onViewDetails={handleViewAppointmentDetails}
+                          />
+                        ))}
+                      </div>
+
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-4">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            السابق
+                          </Button>
+                          <span className="text-sm text-gray-600">
+                            صفحة {currentPage} من {totalPages}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            التالي
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="patients">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  المرضى ({patients?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {patientsLoading ? (
+                  <div className="text-center py-12">جاري التحميل...</div>
+                ) : !patients || patients.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      لا يوجد مرضى
+                    </h3>
+                  </div>
+                ) : (
+                <div className="space-y-3">
+                  {patients.map((patient) => (
+                    <Card key={patient.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{patient.fullName}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                              <Phone className="w-4 h-4" />
+                              <span>{patient.phone}</span>
+                            </div>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            عرض التفاصيل
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="invoices">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  الفواتير ({invoices?.length || 0})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invoicesLoading ? (
+                  <div className="text-center py-12">جاري التحميل...</div>
+                ) : !invoices || invoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <DollarSign className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      لا توجد فواتير
+                    </h3>
+                  </div>
+                ) : (
+                <div className="space-y-3">
+                  {invoices.map((invoice) => (
+                    <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{invoice.patientName}</h3>
+                            <div className="text-sm text-gray-600 mt-1">
+                              المبلغ: {invoice.totalAmount}
+                            </div>
+                            <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
+                              {invoice.status === 'paid' ? 'مدفوعة' : 'معلقة'}
+                            </Badge>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            عرض الفاتورة
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="crm">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="w-5 h-5" />
+                  {t('crm')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {t('crmUnderDevelopment')}
+                  </h3>
+                  <p className="text-gray-600">
+                    {t('willBeAddedSoon')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="insurance">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  {t('insurance')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Shield className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {t('insuranceUnderDevelopment')}
+                  </h3>
+                  <p className="text-gray-600">
+                    {t('willBeAddedSoon')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    المستندات الطبية ({medicalDocuments?.length || 0})
+                  </div>
+                  <Button size="sm" onClick={() => setIsDocumentUploadDialogOpen(true)}>
+                    <Plus className="w-4 h-4 ml-2" />
+                    رفع مستند
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {documentsLoading ? (
+                  <div className="text-center py-12">جاري التحميل...</div>
+                ) : !medicalDocuments || medicalDocuments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      لا توجد مستندات
+                    </h3>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {medicalDocuments.map((document) => (
+                      <Card key={document.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="pt-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-gray-900">{document.patientName}</h3>
+                              <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                                <Badge variant={document.status === 'verified' ? 'default' : document.status === 'rejected' ? 'destructive' : 'secondary'}>
+                                  {document.status === 'pending' ? 'قيد المراجعة' : document.status === 'verified' ? 'تم التحقق' : 'مرفوض'}
+                                </Badge>
+                                <span className="text-sm">
+                                  {document.documentType === 'prescription' ? 'وصفة طبية' :
+                                   document.documentType === 'lab-result' ? 'نتيجة مختبر' :
+                                   document.documentType === 'x-ray' ? 'أشعة سينية' :
+                                   document.documentType === 'mri' ? 'رنين مغناطيسي' :
+                                   document.documentType === 'ct-scan' ? 'أشعة CT' :
+                                   document.documentType === 'ultrasound' ? 'موجات صوتية' :
+                                   document.documentType === 'insurance' ? 'تأمين' : 'أخرى'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">
+                                <span className="font-medium">اسم المستند:</span> {document.title}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                <span className="font-medium">تاريخ الرفع:</span> {new Date(document.createdAt).toLocaleDateString('ar-SA')}
+                              </div>
+                            </div>
+                            <Button size="sm" variant="outline">
+                              عرض
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <MedicalDocumentUploadDialog
+          open={isDocumentUploadDialogOpen}
+          onOpenChange={setIsDocumentUploadDialogOpen}
+          onUpload={handleUploadDocument}
+          patients={patients?.map(p => ({ id: p.id, name: p.fullName })) || []}
+        />
+
+        <Dialog open={isAppointmentDetailOpen} onOpenChange={setIsAppointmentDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>تفاصيل الموعد</DialogTitle>
+              <DialogDescription>
+                تفاصيل الموعد المحدد
+              </DialogDescription>
+            </DialogHeader>
+            {selectedAppointment && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-gray-600">اسم المريض</Label>
+                    <p className="font-medium">{selectedAppointment.patientName || 'مريض غير معروف'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">رقم الهاتف</Label>
+                    <p className="font-medium">{selectedAppointment.patientPhone || 'غير متوفر'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">التاريخ</Label>
+                    <p className="font-medium">{selectedAppointment.appointmentDate || selectedAppointment.date}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">الوقت</Label>
+                    <p className="font-medium">{selectedAppointment.startTime}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">الطبيب</Label>
+                    <p className="font-medium">{selectedAppointment.doctorName || 'غير محدد'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">الحالة</Label>
+                    <div className="font-medium">
+                      <Badge variant="secondary">{selectedAppointment.status}</Badge>
+                    </div>
+                  </div>
+                  {selectedAppointment.priority && (
+                    <div>
+                      <Label className="text-gray-600">الأولوية</Label>
+                      <p className="font-medium">{selectedAppointment.priority}</p>
+                    </div>
+                  )}
+                  {selectedAppointment.notes && (
+                    <div className="col-span-2">
+                      <Label className="text-gray-600">ملاحظات</Label>
+                      <p className="font-medium">{selectedAppointment.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageTransition>
+  )
+}

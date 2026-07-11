@@ -1,0 +1,77 @@
+{
+  "total": 10,
+  "passed": 5,
+  "failed": 5,
+  "tests": [
+    {
+      "testName": "Create Patient - Login",
+      "passed": true,
+      "message": "Logged in as Receptionist",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:03.099Z"
+    },
+    {
+      "testName": "Create Patient - Open Dialog",
+      "passed": true,
+      "message": "Add patient dialog opened",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:06.219Z"
+    },
+    {
+      "testName": "Create Patient - Fill Form",
+      "passed": true,
+      "message": "Patient form filled",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:06.277Z"
+    },
+    {
+      "testName": "Create Patient - Submit",
+      "passed": false,
+      "message": "Submit button not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:12.277Z"
+    },
+    {
+      "testName": "Complete Consultation - Login",
+      "passed": true,
+      "message": "Logged in as Doctor",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:13.664Z"
+    },
+    {
+      "testName": "Complete Consultation - Waiting List",
+      "passed": false,
+      "message": "Waiting list not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:15.317Z"
+    },
+    {
+      "testName": "Complete Consultation - Start",
+      "passed": false,
+      "message": "Start consultation button not found (may be no patients in waiting list)",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:15.324Z"
+    },
+    {
+      "testName": "Create Invoice - Login",
+      "passed": true,
+      "message": "Logged in as Receptionist",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:17.087Z"
+    },
+    {
+      "testName": "Create Invoice - Invoices Section",
+      "passed": false,
+      "message": "Invoices section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:18.539Z"
+    },
+    {
+      "testName": "Create Invoice - Open Dialog",
+      "passed": false,
+      "message": "Add invoice button not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:09:18.548Z"
+    }
+  ]
+}

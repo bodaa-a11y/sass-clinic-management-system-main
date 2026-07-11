@@ -1,0 +1,91 @@
+{
+  "total": 12,
+  "passed": 9,
+  "failed": 3,
+  "tests": [
+    {
+      "testName": "Super Admin Login",
+      "passed": true,
+      "message": "Successfully logged in as Super Admin",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:07.703Z"
+    },
+    {
+      "testName": "Super Admin Dashboard - Page Load",
+      "passed": true,
+      "message": "Dashboard loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:09.179Z"
+    },
+    {
+      "testName": "Super Admin Dashboard - Stats Display",
+      "passed": false,
+      "message": "Stats cards not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:14.180Z"
+    },
+    {
+      "testName": "Super Admin Dashboard - Clinics List",
+      "passed": false,
+      "message": "Clinics list not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:19.180Z"
+    },
+    {
+      "testName": "View All Clinics",
+      "passed": true,
+      "message": "Clinics displayed",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:21.097Z"
+    },
+    {
+      "testName": "Create Clinic - UI Elements",
+      "passed": true,
+      "message": "Found 3 buttons on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:23.250Z"
+    },
+    {
+      "testName": "Create Clinic - Form Elements",
+      "passed": true,
+      "message": "Found 3 form elements",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:23.271Z"
+    },
+    {
+      "testName": "Toggle Clinic Status - Page Content",
+      "passed": true,
+      "message": "Page has content",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:24.686Z"
+    },
+    {
+      "testName": "View Clinic Details - Page Content",
+      "passed": true,
+      "message": "Page has content",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:26.911Z"
+    },
+    {
+      "testName": "Change Edition - Edition Options",
+      "passed": true,
+      "message": "Edition options found in page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:28.995Z"
+    },
+    {
+      "testName": "Change Facility Type - Facility Options",
+      "passed": false,
+      "message": "No facility type options found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:30.330Z"
+    },
+    {
+      "testName": "Logout - Direct Navigation",
+      "passed": true,
+      "message": "Can access login page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:02:31.639Z"
+    }
+  ]
+}

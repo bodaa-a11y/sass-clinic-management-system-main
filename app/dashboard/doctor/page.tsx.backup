@@ -1,0 +1,1048 @@
+'use client'
+
+import { useEffect } from 'react'
+import { useDoctorStore } from './stores/doctor-store'
+import { DoctorHeader } from './components/doctor-layout/doctor-header'
+import { DoctorEmptyState } from './components/doctor-layout/doctor-empty-state'
+import { ExamModeContainer } from './components/exam-mode/exam-mode-container'
+import { WaitingModeContainer } from './components/waiting-mode/waiting-mode-container'
+import { LabResultDialog } from './components/dialogs/lab-result-dialog'
+import { VaccinationDialog } from './components/dialogs/vaccination-dialog'
+import { PrescriptionRenewalDialog } from './components/dialogs/prescription-renewal-dialog'
+import { LabIntegrationDialog } from './components/dialogs/lab-integration-dialog'
+import { useDoctorExam } from './hooks/use-doctor-exam'
+import { useLabResults } from './hooks/use-lab-results'
+import { useVaccinations } from './hooks/use-vaccinations'
+import { usePrescriptionRenewals } from './hooks/use-prescription-renewals'
+import { useLabIntegrations } from './hooks/use-lab-integrations'
+import { useWaitingPatients } from './hooks/use-waiting-patients'
+import { useAutoSave } from './hooks/use-auto-save'
+import { useTenant } from '@/lib/tenant-context'
+import { PageTransition } from '@/components/animations/page-transition'
+import { store } from '@/lib/store'
+
+interface Patient {
+  id: string
+  fullName: string
+  phone: string
+}
+
+interface Appointment {
+  id: string
+  patientId: string
+  patientName: string
+  patientPhone?: string
+  startTime: string
+  status: 'pending' | 'confirmed' | 'in-waiting-room' | 'in-progress' | 'done' | 'cancelled' | 'no-show'
+}
+
+interface LabResult {
+  id: string
+  patientId: string
+  patientName: string
+  testName: string
+  testType: string
+  result: string
+  normalRange?: string
+  status: 'pending' | 'completed' | 'reviewed'
+  testDate: string
+  notes?: string
+  sharedWithPatient?: boolean
+  sharedDate?: string
+}
+
+interface Vaccination {
+  id: string
+  patientId: string
+  patientName: string
+  vaccineName: string
+  vaccineType: string
+  doseNumber: number
+  administrationDate: string
+  nextDueDate?: string
+  batchNumber?: string
+  site: string
+  notes?: string
+}
+
+interface PrescriptionRenewal {
+  id: string
+  patientId: string
+  patientName: string
+  medicationName: string
+  dosage: string
+  frequency: string
+  originalPrescriptionDate: string
+  renewalDate?: string
+  status: 'pending' | 'approved' | 'rejected'
+  notes?: string
+}
+
+interface LabIntegration {
+  id: string
+  labName: string
+  labType: 'internal' | 'external'
+  apiEndpoint?: string
+  apiKey?: string
+  status: 'active' | 'inactive'
+  supportedTests: string[]
+}
+
+interface PatientData {
+  patient: {
+    id: string
+    fullName: string
+    phone: string
+    dateOfBirth?: string
+    allergies?: string
+    medicalHistory?: string
+  }
+  medicalRecords?: Array<{
+    diagnosis: string
+    createdAt: string
+  }>
+  stats?: {
+    totalVisits: number
+    lastVisitDate?: string
+  }
+}
+
+export default function DoctorPage() {
+  const router = useRouter()
+  const { facilityType } = useTenant()
+  const [waitingPatients, setWaitingPatients] = useState<Appointment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<Appointment | null>(null)
+  const [isExamMode, setIsExamMode] = useState(false)
+  const [isPrescriptionStepOpen, setIsPrescriptionStepOpen] = useState(false)
+  const [patientData, setPatientData] = useState<PatientData | null>(null)
+  const [isLabResultDialogOpen, setIsLabResultDialogOpen] = useState(false)
+  const [isVaccinationDialogOpen, setIsVaccinationDialogOpen] = useState(false)
+  const [isPrescriptionRenewalDialogOpen, setIsPrescriptionRenewalDialogOpen] = useState(false)
+  const [isLabIntegrationDialogOpen, setIsLabIntegrationDialogOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [labResultForm, setLabResultForm] = useState({
+    patientId: '',
+    patientName: '',
+    testName: '',
+    testType: '',
+    result: '',
+    normalRange: '',
+    notes: ''
+  })
+  const [vaccinationForm, setVaccinationForm] = useState({
+    patientId: '',
+    patientName: '',
+    vaccineName: '',
+    vaccineType: '',
+    doseNumber: 1,
+    administrationDate: new Date().toISOString().split('T')[0],
+    nextDueDate: '',
+    batchNumber: '',
+    site: '',
+    notes: ''
+  })
+  const [prescriptionRenewalForm, setPrescriptionRenewalForm] = useState({
+    patientId: '',
+    patientName: '',
+    medicationName: '',
+    dosage: '',
+    frequency: '',
+    originalPrescriptionDate: '',
+    notes: ''
+  })
+  const [labIntegrationForm, setLabIntegrationForm] = useState({
+    labName: '',
+    labType: 'external' as 'internal' | 'external',
+    apiEndpoint: '',
+    apiKey: '',
+    supportedTests: [] as string[]
+  })
+
+  useEffect(() => {
+    const userData = store.getUser()
+    setUser(userData)
+    if (userData?.clinicId) {
+      setClinicId(userData.clinicId)
+    }
+  }, [])
+
+  // Use polling for waiting patients (real-time updates every 30 seconds)
+  const { data: waitingPatientsData, isLoading: waitingLoading } = useRealtimeData<Appointment[]>(
+    clinicId ? `/clinics/${clinicId}/appointments?status=in-waiting-room` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const { data: labResults, isLoading: labResultsLoading, refetch: refetchLabResults } = useRealtimeData<LabResult[]>(
+    clinicId ? `/clinics/${clinicId}/lab-results` : '',
+    { interval: 30000, enabled: false } // Disabled - feature not implemented
+  )
+
+  const { data: vaccinations, isLoading: vaccinationsLoading, refetch: refetchVaccinations } = useRealtimeData<Vaccination[]>(
+    clinicId ? `/clinics/${clinicId}/vaccinations` : '',
+    { interval: 30000, enabled: false } // Disabled - feature not implemented
+  )
+
+  const { data: prescriptionRenewals, isLoading: prescriptionRenewalsLoading, refetch: refetchPrescriptionRenewals } = useRealtimeData<PrescriptionRenewal[]>(
+    clinicId ? `/clinics/${clinicId}/prescription-renewals` : '',
+    { interval: 30000, enabled: false } // Disabled - feature not implemented
+  )
+
+  const { data: labIntegrations, isLoading: labIntegrationsLoading, refetch: refetchLabIntegrations } = useRealtimeData<LabIntegration[]>(
+    clinicId ? `/clinics/${clinicId}/lab-integrations` : '',
+    { interval: 30000, enabled: false } // Disabled - feature not implemented
+  )
+
+  const { data: doctors, isLoading: doctorsLoading } = useRealtimeData<any[]>(
+    clinicId ? `/clinics/${clinicId}/staff?role=doctor` : '',
+    { interval: 30000, enabled: !!clinicId && facilityType !== 'single_clinic' }
+  )
+
+  // Update waiting patients when polling data changes
+  useEffect(() => {
+    if (waitingPatientsData) {
+      setWaitingPatients(waitingPatientsData)
+      setIsLoading(false)
+    }
+  }, [waitingPatientsData])
+
+  // Set loading to false if clinicId is not set
+  useEffect(() => {
+    if (!clinicId) {
+      setIsLoading(false)
+    }
+  }, [clinicId])
+
+  const handleStartExam = async (appointment: Appointment) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/patients/${appointment.patientId}`)
+      const data = await response.json()
+      setPatientData(data)
+      setSelectedPatient(appointment)
+      setIsExamMode(true)
+      setIsPrescriptionStepOpen(false)
+    } catch {
+      toast.error('فشل جلب بيانات المريض')
+    }
+  }
+
+  // Fetch next patient data automatically
+  useEffect(() => {
+    if (!isExamMode && waitingPatients.length > 0 && clinicId) {
+      const nextPatient = waitingPatients.find(p => p.status !== 'in-progress' && p.status !== 'done')
+      if (nextPatient) {
+        apiFetch(`/clinics/${clinicId}/patients/${nextPatient.patientId}`)
+          .then(res => res.json())
+          .then(data => setPatientData(data))
+          .catch(() => {
+            // Silently fail if we can't fetch next patient data
+          })
+      }
+    }
+  }, [isExamMode, waitingPatients, clinicId])
+
+  const handleBackToWaitingList = () => {
+    setIsExamMode(false)
+    setSelectedPatient(null)
+    setPatientData(null)
+    setIsPrescriptionStepOpen(false)
+  }
+
+  const handleWizardSubmit = async (data: any) => {
+    if (!selectedPatient || !clinicId) return
+
+    try {
+      // Update appointment status to in-progress
+      await apiFetch(`/clinics/${clinicId}/appointments/${selectedPatient.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'in-progress' })
+      })
+
+      // Create medical record
+      const medicalRecordResponse = await apiFetch(`/clinics/${clinicId}/medical-records`, {
+        method: 'POST',
+        body: JSON.stringify({
+          patientId: selectedPatient.patientId,
+          doctorId: store.getUser()?.id,
+          chiefComplaint: data.diagnosis,
+          diagnosis: data.diagnosis,
+          clinicalNotes: data.clinicalNotes,
+          treatmentPlan: data.treatmentPlan
+        })
+      })
+
+      if (medicalRecordResponse.ok) {
+        const medicalRecordData = await medicalRecordResponse.json()
+
+        // Add prescriptions if any
+        if (data.prescriptions && data.prescriptions.length > 0) {
+          await apiFetch(`/clinics/${clinicId}/prescriptions`, {
+            method: 'POST',
+            body: JSON.stringify({
+              medicalRecordId: medicalRecordData.data.id,
+              medications: data.prescriptions
+            })
+          })
+        }
+
+        // Create invoice if requested
+        if (data.createInvoice) {
+          const invoiceResponse = await apiFetch(`/clinics/${clinicId}/invoices`, {
+            method: 'POST',
+            body: JSON.stringify({
+              patientId: selectedPatient.patientId,
+              appointmentId: selectedPatient.id,
+              items: [{
+                description: 'فحص طبي',
+                quantity: 1,
+                unitPrice: '100.00',
+                totalPrice: '100.00',
+                itemType: 'consultation'
+              }],
+              totalAmount: '100.00',
+              subtotal: '100.00',
+              taxAmount: '0',
+              discountAmount: '0',
+              dueDate: new Date().toISOString().split('T')[0]
+            })
+          })
+
+          if (invoiceResponse.ok) {
+            const invoiceData = await invoiceResponse.json()
+            toast.success('تم تسجيل الفحص وإنشاء الفاتورة', {
+              description: `فاتورة #${invoiceData.data.invoiceNumber}`,
+              action: {
+                label: 'تسجيل دفع',
+                onClick: () => router.push('/dashboard/billing')
+              }
+            })
+          } else {
+            toast.success('تم تسجيل الفحص بنجاح', {
+              description: 'فشل إنشاء الفاتورة تلقائياً'
+            })
+          }
+        }
+
+        // Schedule follow-up appointment if requested
+        if (data.scheduleFollowUp && data.followUpDate) {
+          try {
+            const followUpResponse = await apiFetch(`/clinics/${clinicId}/appointments`, {
+              method: 'POST',
+              body: JSON.stringify({
+                patientId: selectedPatient.patientId,
+                doctorId: store.getUser()?.id,
+                appointmentDate: data.followUpDate,
+                startTime: '09:00',
+                endTime: '09:30',
+                notes: 'موعد متابعة',
+                status: 'pending'
+              })
+            })
+
+            if (followUpResponse.ok) {
+              toast.success('تم حجز موعد المتابعة بنجاح', {
+                description: data.followUpDate
+              })
+            }
+          } catch {
+            toast.error('فشل حجز موعد المتابعة')
+          }
+        }
+
+        if (!data.createInvoice) {
+          toast.success('تم تسجيل الفحص بنجاح', {
+            description: 'تم حفظ السجل الطبي',
+            action: {
+              label: 'عرض السجل الطبي',
+              onClick: () => router.push(`/dashboard/patients/${selectedPatient.patientId}?tab=medical-records`)
+            }
+          })
+        }
+
+        handleBackToWaitingList()
+        // Polling will automatically refresh the waiting patients list
+      }
+    } catch {
+      toast.error('فشل تسجيل الفحص')
+    }
+  }
+
+  const handleAddLabResult = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/lab-results`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...labResultForm,
+          status: 'completed',
+          testDate: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة نتيجة المختبر بنجاح')
+        setIsLabResultDialogOpen(false)
+        setLabResultForm({
+          patientId: '',
+          patientName: '',
+          testName: '',
+          testType: '',
+          result: '',
+          normalRange: '',
+          notes: ''
+        })
+        refetchLabResults()
+      } else {
+        toast.error('فشل إضافة نتيجة المختبر')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء إضافة نتيجة المختبر')
+    }
+  }
+
+  const handleShareLabResult = async (labResultId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/lab-results/${labResultId}/share`, {
+        method: 'POST',
+        body: JSON.stringify({ sharedDate: new Date().toISOString() })
+      })
+
+      if (response.ok) {
+        toast.success('تمت مشاركة النتيجة مع المريض')
+        refetchLabResults()
+      } else {
+        toast.error('فشل مشاركة النتيجة')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء مشاركة النتيجة')
+    }
+  }
+
+  // Helper function to check if result is outside normal range
+  const isResultAbnormal = (result: string, normalRange?: string): boolean => {
+    if (!normalRange) return false
+    
+    // Parse numeric values from result and range
+    const resultValue = parseFloat(result)
+    if (isNaN(resultValue)) return false
+    
+    // Parse range (e.g., "70-120" or "120/80")
+    if (normalRange.includes('-')) {
+      const [min, max] = normalRange.split('-').map(v => parseFloat(v.trim()))
+      if (!isNaN(min) && !isNaN(max)) {
+        return resultValue < min || resultValue > max
+      }
+    } else if (normalRange.includes('/')) {
+      // Handle blood pressure format
+      const parts = result.split('/').map(v => parseFloat(v.trim()))
+      const rangeParts = normalRange.split('/').map(v => parseFloat(v.trim()))
+      if (parts.length === 2 && rangeParts.length === 2) {
+        return parts[0] < rangeParts[0] || parts[1] > rangeParts[1]
+      }
+    }
+    
+    return false
+  }
+
+  const handlePrescriptionRenewal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/prescription-renewals`, {
+        method: 'POST',
+        body: JSON.stringify(prescriptionRenewalForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إرسال طلب تجديد الوصفة بنجاح')
+        setIsPrescriptionRenewalDialogOpen(false)
+        setPrescriptionRenewalForm({
+          patientId: '',
+          patientName: '',
+          medicationName: '',
+          dosage: '',
+          frequency: '',
+          originalPrescriptionDate: '',
+          notes: ''
+        })
+        refetchPrescriptionRenewals()
+      } else {
+        toast.error('فشل إرسال طلب تجديد الوصفة')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء إرسال طلب تجديد الوصفة')
+    }
+  }
+
+  const handleApproveRenewal = async (renewalId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/prescription-renewals/${renewalId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({
+          status: 'approved',
+          renewalDate: new Date().toISOString()
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تمت الموافقة على تجديد الوصفة')
+        refetchPrescriptionRenewals()
+      } else {
+        toast.error('فشل الموافقة على تجديد الوصفة')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء الموافقة على تجديد الوصفة')
+    }
+  }
+
+  const handleRejectRenewal = async (renewalId: string) => {
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/prescription-renewals/${renewalId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({
+          status: 'rejected'
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تم رفض طلب تجديد الوصفة')
+        refetchPrescriptionRenewals()
+      } else {
+        toast.error('فشل رفض طلب تجديد الوصفة')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء رفض طلب تجديد الوصفة')
+    }
+  }
+
+  const handleAddLabIntegration = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/lab-integrations`, {
+        method: 'POST',
+        body: JSON.stringify(labIntegrationForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة تكامل المختبر بنجاح')
+        setIsLabIntegrationDialogOpen(false)
+        setLabIntegrationForm({
+          labName: '',
+          labType: 'external',
+          apiEndpoint: '',
+          apiKey: '',
+          supportedTests: []
+        })
+        refetchLabIntegrations()
+      } else {
+        toast.error('فشل إضافة تكامل المختبر')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء إضافة تكامل المختبر')
+    }
+  }
+
+  const handleAddVaccination = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/vaccinations`, {
+        method: 'POST',
+        body: JSON.stringify(vaccinationForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة التطعيم بنجاح')
+        setIsVaccinationDialogOpen(false)
+        setVaccinationForm({
+          patientId: '',
+          patientName: '',
+          vaccineName: '',
+          vaccineType: '',
+          doseNumber: 1,
+          administrationDate: new Date().toISOString().split('T')[0],
+          nextDueDate: '',
+          batchNumber: '',
+          site: '',
+          notes: ''
+        })
+        refetchVaccinations()
+      } else {
+        toast.error('فشل إضافة التطعيم')
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء إضافة التطعيم')
+    }
+  }
+
+  const handleStepChange = (step: number) => {
+    setIsPrescriptionStepOpen(step === 2) // Step 2 is prescriptions
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  return (
+    <PageTransition>
+      <div className="h-screen overflow-hidden bg-gray-50 flex flex-col" dir="rtl">
+        {/* Header */}
+        <div className="bg-white border-b px-6 py-4">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Stethoscope className="w-7 h-7 text-blue-700" />
+            {isExamMode ? `فحص - ${selectedPatient?.patientName}` : (facilityType === 'single_clinic' ? 'عيادة الطبيب' : 'غرفة الطبيب')}
+          </h1>
+          <p className="text-slate-600 mt-1 text-sm font-light">
+            {isExamMode ? 'جاري الفحص الطبي' : (
+              <>
+                {facilityType === 'single_clinic' && 'عيادة طبيب واحد'}
+                {facilityType === 'multi_clinic' && 'عيادة متعددة أطباء'}
+                {facilityType === 'medical_center' && 'مركز طبي'}
+                {' • إدارة الفحوصات والمرضى المنتظرين'}
+              </>
+            )}
+          </p>
+        </div>
+
+      {/* Four Column Layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden p-6">
+        {/* Left Column - Waiting List (20%) - Hidden during exam */}
+        {!isExamMode && (
+          <div className="lg:col-span-3 order-2 lg:order-1">
+            <WaitingListBar
+              waitingPatients={waitingPatients}
+              onStartExam={handleStartExam}
+              nextPatientData={patientData}
+            />
+          </div>
+        )}
+
+        {/* Middle Column - Work Area (55% or 100% during exam) */}
+        <div className={`${isExamMode ? 'lg:col-span-12' : 'lg:col-span-6'} order-1 lg:order-2 flex flex-col h-full overflow-hidden`}>
+          {isExamMode && selectedPatient && patientData ? (
+            <div className="space-y-6">
+              {/* Close Exam Button */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">فحص: {selectedPatient.patientName}</h2>
+                <Button
+                  variant="ghost"
+                  onClick={handleBackToWaitingList}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  ✕ إغلاق الفحص
+                </Button>
+              </div>
+
+              {/* Patient Exam Card - Large, No Scroll */}
+              <PatientExamCard
+                patientData={patientData}
+                isPrescriptionStepOpen={isPrescriptionStepOpen}
+              />
+
+              {/* Exam Wizard */}
+              <Tabs defaultValue="examination" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4 bg-white">
+                  <TabsTrigger value="examination">التشخيص</TabsTrigger>
+                  <TabsTrigger value="labs">المختبرات</TabsTrigger>
+                  <TabsTrigger value="radiology">الأشعة</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="examination">
+                  <MedicalExamWizard
+                    patientName={selectedPatient.patientName}
+                    patientId={selectedPatient.patientId}
+                    clinicId={clinicId || undefined}
+                    onSubmit={handleWizardSubmit}
+                    onCancel={handleBackToWaitingList}
+                    isSubmitting={false}
+                    onStepChange={handleStepChange}
+                  />
+                </TabsContent>
+
+                <TabsContent value="labs">
+                  <CompactLabResultsTable
+                    results={labResults?.map(r => ({
+                      id: r.id,
+                      testName: r.testName,
+                      testType: r.testType,
+                      result: r.result,
+                      normalRange: r.normalRange,
+                      status: r.status as 'completed' | 'pending',
+                      testDate: r.testDate || new Date().toISOString()
+                    })) || []}
+                    onAddResult={() => setIsLabResultDialogOpen(true)}
+                  />
+                </TabsContent>
+
+                <TabsContent value="radiology">
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      الأشعة والتصوير
+                    </h3>
+                    <p className="text-gray-500">
+                      سيتم عرض نتائج الأشعة والتصوير الطبي هنا
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Stethoscope className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  اختر مريضاً لبدء الفحص
+                </h3>
+                <p className="text-gray-500">
+                  من قائمة المرضى المنتظرين على اليمين
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Patient Context Bar (25%) - Hidden during exam */}
+        {!isExamMode && (
+          <div className="lg:col-span-3 order-3 lg:order-3 flex flex-col overflow-hidden">
+            {patientData ? (
+              <div className="lg:sticky lg:top-0 lg:self-start overflow-y-auto">
+                <PatientContextBar patientData={patientData} isPrescriptionStepOpen={isPrescriptionStepOpen} />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <User className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-500">
+                    سيظهر هنا معلومات المريض عند بدء الفحص
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Dialogs */}
+      <Dialog open={isLabResultDialogOpen} onOpenChange={setIsLabResultDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة نتيجة مختبر جديدة</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddLabResult} className="space-y-4">
+            <div>
+              <Label htmlFor="patientName">اسم المريض *</Label>
+              <Input
+                id="patientName"
+                value={labResultForm.patientName}
+                onChange={(e) => setLabResultForm({ ...labResultForm, patientName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="testName">اسم الفحص *</Label>
+              <Input
+                id="testName"
+                value={labResultForm.testName}
+                onChange={(e) => setLabResultForm({ ...labResultForm, testName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="testType">نوع الفحص *</Label>
+              <Input
+                id="testType"
+                value={labResultForm.testType}
+                onChange={(e) => setLabResultForm({ ...labResultForm, testType: e.target.value })}
+                placeholder="مثال: دم، بول، صورة شعاعية"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="result">النتيجة *</Label>
+              <Textarea
+                id="result"
+                value={labResultForm.result}
+                onChange={(e) => setLabResultForm({ ...labResultForm, result: e.target.value })}
+                required
+                rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="normalRange">النطاق الطبيعي</Label>
+              <Input
+                id="normalRange"
+                value={labResultForm.normalRange}
+                onChange={(e) => setLabResultForm({ ...labResultForm, normalRange: e.target.value })}
+                placeholder="مثال: 70-120"
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Textarea
+                id="notes"
+                value={labResultForm.notes}
+                onChange={(e) => setLabResultForm({ ...labResultForm, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsLabResultDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit">إضافة</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isVaccinationDialogOpen} onOpenChange={setIsVaccinationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة تطعيم جديد</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddVaccination} className="space-y-4">
+            <div>
+              <Label htmlFor="patientName">اسم المريض *</Label>
+              <Input
+                id="patientName"
+                value={vaccinationForm.patientName}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, patientName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="vaccineName">اسم اللقاح *</Label>
+              <Input
+                id="vaccineName"
+                value={vaccinationForm.vaccineName}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, vaccineName: e.target.value })}
+                placeholder="مثال: لقاح الإنفلونزا"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="vaccineType">نوع اللقاح *</Label>
+              <Input
+                id="vaccineType"
+                value={vaccinationForm.vaccineType}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, vaccineType: e.target.value })}
+                placeholder="مثال: فيروسي، بكتيري"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="doseNumber">رقم الجرعة *</Label>
+              <Input
+                id="doseNumber"
+                type="number"
+                min="1"
+                value={vaccinationForm.doseNumber}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, doseNumber: parseInt(e.target.value) || 1 })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="administrationDate">تاريخ الإعطاء *</Label>
+              <Input
+                id="administrationDate"
+                type="date"
+                value={vaccinationForm.administrationDate}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, administrationDate: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="nextDueDate">تاريخ الجرعة التالية</Label>
+              <Input
+                id="nextDueDate"
+                type="date"
+                value={vaccinationForm.nextDueDate}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, nextDueDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="batchNumber">رقم الدفعة</Label>
+              <Input
+                id="batchNumber"
+                value={vaccinationForm.batchNumber}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, batchNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="site">موقع الإعطاء *</Label>
+              <Input
+                id="site"
+                value={vaccinationForm.site}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, site: e.target.value })}
+                placeholder="مثال: الذراع اليسرى، الفخذ الأيمن"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Textarea
+                id="notes"
+                value={vaccinationForm.notes}
+                onChange={(e) => setVaccinationForm({ ...vaccinationForm, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsVaccinationDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit">إضافة</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPrescriptionRenewalDialogOpen} onOpenChange={setIsPrescriptionRenewalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>طلب تجديد وصفة</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePrescriptionRenewal} className="space-y-4">
+            <div>
+              <Label htmlFor="patientName">اسم المريض *</Label>
+              <Input
+                id="patientName"
+                value={prescriptionRenewalForm.patientName}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, patientName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="medicationName">اسم الدواء *</Label>
+              <Input
+                id="medicationName"
+                value={prescriptionRenewalForm.medicationName}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, medicationName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="dosage">الجرعة *</Label>
+              <Input
+                id="dosage"
+                value={prescriptionRenewalForm.dosage}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, dosage: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="frequency">التكرار *</Label>
+              <Input
+                id="frequency"
+                value={prescriptionRenewalForm.frequency}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, frequency: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="originalPrescriptionDate">تاريخ الوصفة الأصلية *</Label>
+              <Input
+                id="originalPrescriptionDate"
+                type="date"
+                value={prescriptionRenewalForm.originalPrescriptionDate}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, originalPrescriptionDate: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Textarea
+                id="notes"
+                value={prescriptionRenewalForm.notes}
+                onChange={(e) => setPrescriptionRenewalForm({ ...prescriptionRenewalForm, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsPrescriptionRenewalDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit">إرسال الطلب</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isLabIntegrationDialogOpen} onOpenChange={setIsLabIntegrationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة تكامل مختبر جديد</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddLabIntegration} className="space-y-4">
+            <div>
+              <Label htmlFor="labName">اسم المختبر *</Label>
+              <Input
+                id="labName"
+                value={labIntegrationForm.labName}
+                onChange={(e) => setLabIntegrationForm({ ...labIntegrationForm, labName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="labType">نوع المختبر *</Label>
+              <select
+                id="labType"
+                value={labIntegrationForm.labType}
+                onChange={(e) => setLabIntegrationForm({ ...labIntegrationForm, labType: e.target.value as 'internal' | 'external' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="internal">داخلي</option>
+                <option value="external">خارجي</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="apiEndpoint">رابط API</Label>
+              <Input
+                id="apiEndpoint"
+                value={labIntegrationForm.apiEndpoint}
+                onChange={(e) => setLabIntegrationForm({ ...labIntegrationForm, apiEndpoint: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="apiKey">مفتاح API</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                value={labIntegrationForm.apiKey}
+                onChange={(e) => setLabIntegrationForm({ ...labIntegrationForm, apiKey: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsLabIntegrationDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit">إضافة</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      </div>
+    </PageTransition>
+  )
+}

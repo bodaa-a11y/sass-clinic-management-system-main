@@ -1,0 +1,717 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { apiFetch } from '@/lib/api-client'
+import { store } from '@/lib/store'
+import { Button } from '@/components/ui/button-redesigned'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card-redesigned'
+import { Badge } from '@/components/ui/badge-redesigned'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input-redesigned'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs-redesigned'
+import { toast } from 'sonner'
+import { Building2, Users, Sparkles, Package, Plus, Edit, Trash2 } from 'lucide-react'
+import { useRealtimeData } from '@/lib/use-realtime-data'
+import { useTenant } from '@/lib/tenant-context'
+import { PageTransition } from '@/components/animations/page-transition'
+import { SlideIn } from '@/components/animations/feedback-animations'
+import { HoverScale } from '@/components/animations/micro-interactions'
+
+interface Staff {
+  id: string
+  name: string
+  email: string
+  role: 'doctor' | 'receptionist' | 'nurse'
+  isActive: boolean
+}
+
+interface Specialty {
+  id: string
+  name: string
+  description: string
+}
+
+interface Service {
+  id: string
+  name: string
+  description: string
+  price: string
+}
+
+interface Department {
+  id: string
+  name: string
+  description: string
+}
+
+interface RolePermissions {
+  role: string
+  permissions: {
+    dashboard: boolean
+    appointments: boolean
+    finance: boolean
+    pharmacy: boolean
+    reports: boolean
+    settings: boolean
+  }
+}
+
+export default function AdminPage() {
+  const [clinicId, setClinicId] = useState<string | null>(null)
+  const [isStaffDialogOpen, setIsStaffDialogOpen] = useState(false)
+  const [isSpecialtyDialogOpen, setIsSpecialtyDialogOpen] = useState(false)
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false)
+
+  const [staffForm, setStaffForm] = useState({ name: '', email: '', role: 'doctor' as 'doctor' | 'receptionist' | 'nurse', password: '' })
+  const [specialtyForm, setSpecialtyForm] = useState({ name: '', description: '' })
+  const [serviceForm, setServiceForm] = useState({ name: '', description: '', price: '' })
+  const [rolePermissions, setRolePermissions] = useState<RolePermissions[]>([
+    {
+      role: 'doctor',
+      permissions: {
+        dashboard: true,
+        appointments: true,
+        finance: false,
+        pharmacy: true,
+        reports: true,
+        settings: false
+      }
+    },
+    {
+      role: 'receptionist',
+      permissions: {
+        dashboard: true,
+        appointments: true,
+        finance: false,
+        pharmacy: false,
+        reports: false,
+        settings: false
+      }
+    },
+    {
+      role: 'clinic_admin',
+      permissions: {
+        dashboard: true,
+        appointments: true,
+        finance: true,
+        pharmacy: true,
+        reports: true,
+        settings: true
+      }
+    }
+  ])
+  const [isSavingPermissions, setIsSavingPermissions] = useState(false)
+
+  const { facilityType } = useTenant()
+
+  useEffect(() => {
+    const user = store.getUser()
+    if (user?.clinicId) {
+      setClinicId(user.clinicId)
+    }
+  }, [])
+
+  // Check if this is a single clinic with limited staff management
+  const user = store.getUser()
+  const isSingleClinicLimited = facilityType === 'single_clinic' &&
+    (user?.role === 'doctor' || user?.role === 'clinic_admin')
+
+  const { data: staff, isLoading: staffLoading } = useRealtimeData<Staff[]>(
+    clinicId ? `/clinics/${clinicId}/staff` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  // Count staff by role
+  const doctorCount = staff?.filter(s => s.role === 'doctor').length || 0
+  const receptionistCount = staff?.filter(s => s.role === 'receptionist').length || 0
+  const nurseCount = staff?.filter(s => s.role === 'nurse').length || 0
+
+  // Limits based on facility type
+  const receptionistLimit = facilityType === 'single_clinic' ? 2 : 30
+  const canAddDoctor = facilityType !== 'single_clinic' || doctorCount === 0
+  const canAddReceptionist = receptionistCount < receptionistLimit
+  const canAddNurse = facilityType === 'medical_center'
+
+  const { data: specialties, isLoading: specialtiesLoading } = useRealtimeData<Specialty[]>(
+    clinicId ? `/clinics/${clinicId}/specialties` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const { data: services, isLoading: servicesLoading } = useRealtimeData<Service[]>(
+    clinicId ? `/clinics/${clinicId}/services` : '',
+    { interval: 30000, enabled: !!clinicId }
+  )
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    // Check limits based on role
+    if (staffForm.role === 'doctor' && !canAddDoctor) {
+      toast.error(facilityType === 'single_clinic'
+        ? 'لا يمكن إضافة أكثر من طبيب واحد في عيادة فردية'
+        : 'لا يمكن إضافة المزيد من الأطباء')
+      return
+    }
+
+    if (staffForm.role === 'receptionist' && !canAddReceptionist) {
+      toast.error(`لا يمكن إضافة أكثر من ${receptionistLimit} موظف استقبال`)
+      return
+    }
+
+    if (staffForm.role === 'nurse' && !canAddNurse) {
+      toast.error('الممرضون متاحون فقط في المراكز الطبية')
+      return
+    }
+
+    // For single clinic limited mode, force role to receptionist
+    const roleToSubmit = isSingleClinicLimited ? 'receptionist' : staffForm.role
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/staff`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...staffForm,
+          role: roleToSubmit
+        })
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة الموظف بنجاح')
+        setStaffForm({ name: '', email: '', role: 'doctor', password: '' })
+        setIsStaffDialogOpen(false)
+      } else {
+        toast.error('فشل إضافة الموظف')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء إضافة الموظف')
+    }
+  }
+
+  const handleAddSpecialty = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/specialties`, {
+        method: 'POST',
+        body: JSON.stringify(specialtyForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة التخصص بنجاح')
+        setSpecialtyForm({ name: '', description: '' })
+        setIsSpecialtyDialogOpen(false)
+      } else {
+        toast.error('فشل إضافة التخصص')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء إضافة التخصص')
+    }
+  }
+
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!clinicId) return
+
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/services`, {
+        method: 'POST',
+        body: JSON.stringify(serviceForm)
+      })
+
+      if (response.ok) {
+        toast.success('تم إضافة الخدمة بنجاح')
+        setServiceForm({ name: '', description: '', price: '' })
+        setIsServiceDialogOpen(false)
+      } else {
+        toast.error('فشل إضافة الخدمة')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء إضافة الخدمة')
+    }
+  }
+
+  const handleSavePermissions = async () => {
+    if (!clinicId) return
+
+    setIsSavingPermissions(true)
+    try {
+      const response = await apiFetch(`/clinics/${clinicId}/permissions`, {
+        method: 'PUT',
+        body: JSON.stringify({ rolePermissions })
+      })
+
+      if (response.ok) {
+        toast.success('تم حفظ الصلاحيات بنجاح')
+      } else {
+        toast.error('فشل حفظ الصلاحيات')
+      }
+    } catch (error) {
+      toast.error('حدث خطأ أثناء حفظ الصلاحيات')
+    } finally {
+      setIsSavingPermissions(false)
+    }
+  }
+
+  const handlePermissionChange = (roleIndex: number, permissionKey: string, value: boolean) => {
+    const newPermissions = [...rolePermissions]
+    const permissions = newPermissions[roleIndex].permissions
+    ;(permissions as any)[permissionKey] = value
+    setRolePermissions(newPermissions)
+  }
+
+  return (
+    <PageTransition>
+      <div className="space-y-6">
+        {/* Header */}
+        <SlideIn direction="up" delay={0.1}>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+              <Building2 className="w-8 h-8 text-medical-blue" />
+              {isSingleClinicLimited ? 'إدارة الاستقبال' : 'إدارة العيادة'}
+            </h1>
+            <p className="text-slate-600 mt-1">
+              {isSingleClinicLimited ? 'إضافة وإدارة موظفي الاستقبال' : 'إدارة الموظفين والتخصصات والخدمات'}
+            </p>
+          </div>
+        </SlideIn>
+
+      <Tabs defaultValue="staff" className="w-full">
+        <TabsList className={`grid ${isSingleClinicLimited ? 'w-full' : 'grid-cols-3 md:grid-cols-5'} w-full`}>
+          <TabsTrigger value="staff" className="text-xs sm:text-sm">الموظفين</TabsTrigger>
+          {!isSingleClinicLimited && (
+            <>
+              <TabsTrigger value="specialties" className="text-xs sm:text-sm">التخصصات</TabsTrigger>
+              <TabsTrigger value="services" className="text-xs sm:text-sm">الخدمات</TabsTrigger>
+              <TabsTrigger value="departments" className="text-xs sm:text-sm">الأقسام</TabsTrigger>
+              <TabsTrigger value="permissions" className="text-xs sm:text-sm">الصلاحيات</TabsTrigger>
+            </>
+          )}
+        </TabsList>
+
+        <TabsContent value="staff">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  الموظفين ({staff?.length || 0})
+                </div>
+                <Dialog open={isStaffDialogOpen} onOpenChange={setIsStaffDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 ml-2" />
+                      {isSingleClinicLimited ? 'إضافة موظف استقبال' : 'إضافة موظف'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{isSingleClinicLimited ? 'إضافة موظف استقبال جديد' : 'إضافة موظف جديد'}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddStaff} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">الاسم *</Label>
+                        <Input
+                          id="name"
+                          value={staffForm.name}
+                          onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">البريد الإلكتروني *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={staffForm.email}
+                          onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                      {!isSingleClinicLimited && (
+                        <div>
+                          <Label htmlFor="role">الدور *</Label>
+                          <Select value={staffForm.role} onValueChange={(value: 'doctor' | 'receptionist' | 'nurse') => setStaffForm({ ...staffForm, role: value })}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الدور" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="doctor" disabled={!canAddDoctor}>
+                                طبيب {!canAddDoctor && '(غير متاح)'}
+                              </SelectItem>
+                              <SelectItem value="receptionist" disabled={!canAddReceptionist}>
+                                استقبال {!canAddReceptionist && `(حد أقصى ${receptionistLimit})`}
+                              </SelectItem>
+                              <SelectItem value="nurse" disabled={!canAddNurse}>
+                                ممرض {!canAddNurse && '(المركز الطبي فقط)'}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {isSingleClinicLimited && (
+                        <input type="hidden" name="role" value="receptionist" />
+                      )}
+                      <div>
+                        <Label htmlFor="password">كلمة المرور *</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={staffForm.password}
+                          onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsStaffDialogOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button type="submit">إضافة</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {staffLoading ? (
+                <div className="text-center py-12">جاري التحميل...</div>
+              ) : !staff || staff.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    لا يوجد موظفين
+                  </h3>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {staff.map((member) => (
+                    <Card key={member.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{member.name}</h3>
+                            <div className="text-sm text-gray-600 mt-1">{member.email}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={member.role === 'doctor' ? 'default' : 'secondary'}>
+                              {member.role === 'doctor' ? 'طبيب' : 'استقبال'}
+                            </Badge>
+                            <Button size="sm" variant="outline">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="specialties">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  التخصصات ({specialties?.length || 0})
+                </div>
+                <Dialog open={isSpecialtyDialogOpen} onOpenChange={setIsSpecialtyDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 ml-2" />
+                      إضافة تخصص
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>إضافة تخصص جديد</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddSpecialty} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">اسم التخصص *</Label>
+                        <Input
+                          id="name"
+                          value={specialtyForm.name}
+                          onChange={(e) => setSpecialtyForm({ ...specialtyForm, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description">الوصف</Label>
+                        <Textarea
+                          id="description"
+                          value={specialtyForm.description}
+                          onChange={(e) => setSpecialtyForm({ ...specialtyForm, description: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsSpecialtyDialogOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button type="submit">إضافة</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {specialtiesLoading ? (
+                <div className="text-center py-12">جاري التحميل...</div>
+              ) : !specialties || specialties.length === 0 ? (
+                <div className="text-center py-12">
+                  <Sparkles className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    لا توجد تخصصات
+                  </h3>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {specialties.map((specialty) => (
+                    <Card key={specialty.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{specialty.name}</h3>
+                            <div className="text-sm text-gray-600 mt-1">{specialty.description}</div>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="services">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  الخدمات ({services?.length || 0})
+                </div>
+                <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="w-4 h-4 ml-2" />
+                      إضافة خدمة
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>إضافة خدمة جديدة</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleAddService} className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">اسم الخدمة *</Label>
+                        <Input
+                          id="name"
+                          value={serviceForm.name}
+                          onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="description">الوصف</Label>
+                        <Textarea
+                          id="description"
+                          value={serviceForm.description}
+                          onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="price">السعر *</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          value={serviceForm.price}
+                          onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsServiceDialogOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button type="submit">إضافة</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {servicesLoading ? (
+                <div className="text-center py-12">جاري التحميل...</div>
+              ) : !services || services.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    لا توجد خدمات
+                  </h3>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {services.map((service) => (
+                    <Card key={service.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                            <div className="text-sm text-gray-600 mt-1">{service.description}</div>
+                            <div className="text-sm font-bold text-green-600 mt-1">{service.price} ر.س</div>
+                          </div>
+                          <Button size="sm" variant="outline">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="departments">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                الأقسام
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  هذه الميزة متاحة فقط للمراكز الطبية
+                </h3>
+                <p className="text-gray-500">
+                  في عيادة طبيب واحد، لا حاجة لإدارة الأقسام
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                الصلاحيات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {rolePermissions.map((rolePermission, roleIndex) => (
+                  <Card key={rolePermission.role} className="border border-slate-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">
+                        {rolePermission.role === 'doctor' ? 'الطبيب' :
+                         rolePermission.role === 'receptionist' ? 'الاستقبال' :
+                         rolePermission.role === 'clinic_admin' ? 'مدير العيادة' : rolePermission.role}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-dashboard`}
+                            checked={rolePermission.permissions.dashboard}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'dashboard', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-dashboard`} className="cursor-pointer">
+                            لوحة التحكم
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-appointments`}
+                            checked={rolePermission.permissions.appointments}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'appointments', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-appointments`} className="cursor-pointer">
+                            إدارة المواعيد
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-finance`}
+                            checked={rolePermission.permissions.finance}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'finance', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-finance`} className="cursor-pointer">
+                            إدارة المالية
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-pharmacy`}
+                            checked={rolePermission.permissions.pharmacy}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'pharmacy', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-pharmacy`} className="cursor-pointer">
+                            إدارة الصيدلية
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-reports`}
+                            checked={rolePermission.permissions.reports}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'reports', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-reports`} className="cursor-pointer">
+                            إدارة التقارير
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <Checkbox
+                            id={`${rolePermission.role}-settings`}
+                            checked={rolePermission.permissions.settings}
+                            onCheckedChange={(checked) => handlePermissionChange(roleIndex, 'settings', checked as boolean)}
+                          />
+                          <Label htmlFor={`${rolePermission.role}-settings`} className="cursor-pointer">
+                            إدارة الإعدادات
+                          </Label>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="pt-4 border-t mt-6">
+                <Button
+                  className="w-full"
+                  onClick={handleSavePermissions}
+                  disabled={isSavingPermissions}
+                >
+                  {isSavingPermissions ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      </div>
+    </PageTransition>
+  )
+}

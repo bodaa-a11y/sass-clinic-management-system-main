@@ -1,0 +1,101 @@
+{
+  "total": 9,
+  "passed": 3,
+  "failed": 6,
+  "tests": [
+    {
+      "testName": "Cross-Role: Doctor → Admin",
+      "passed": false,
+      "message": "SECURITY ISSUE: Doctor can access Admin",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:06:48.162Z",
+      "isSecurityIssue": true
+    },
+    {
+      "testName": "Cross-Role: Doctor → Reception",
+      "passed": false,
+      "message": "SECURITY ISSUE: Doctor can access Reception",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:06:48.983Z",
+      "isSecurityIssue": true
+    },
+    {
+      "testName": "Cross-Role: Receptionist → Doctor",
+      "passed": false,
+      "message": "SECURITY ISSUE: Receptionist can access Doctor",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:06:51.997Z",
+      "isSecurityIssue": true
+    },
+    {
+      "testName": "Cross-Role: Receptionist → Admin",
+      "passed": false,
+      "message": "SECURITY ISSUE: Receptionist can access Admin",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:06:53.120Z",
+      "isSecurityIssue": true
+    },
+    {
+      "testName": "Cross-Role: Clinic Admin → Super Admin",
+      "passed": true,
+      "message": "Clinic Admin correctly blocked from Super Admin",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:06:58.001Z",
+      "isSecurityIssue": true
+    },
+    {
+      "testName": "Granular: Receptionist → Finance",
+      "passed": false,
+      "message": "Receptionist can access Finance (check if intended)",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:07:03.772Z",
+      "isSecurityIssue": false
+    },
+    {
+      "testName": "Granular: Receptionist → Reports",
+      "passed": false,
+      "message": "Receptionist can access Reports (check if intended)",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:07:07.136Z",
+      "isSecurityIssue": false
+    },
+    {
+      "testName": "Granular: Doctor → Settings",
+      "passed": true,
+      "message": "Doctor correctly blocked from Settings",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:07:12.412Z",
+      "isSecurityIssue": false
+    },
+    {
+      "testName": "Tenant Isolation - Clinic Context",
+      "passed": true,
+      "message": "User has clinic context",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:07:14.305Z",
+      "isSecurityIssue": false
+    }
+  ],
+  "securityIssues": [
+    {
+      "testName": "Cross-Role: Doctor → Admin",
+      "message": "SECURITY ISSUE: Doctor can access Admin",
+      "timestamp": "2026-04-23T12:06:48.162Z"
+    },
+    {
+      "testName": "Cross-Role: Doctor → Reception",
+      "message": "SECURITY ISSUE: Doctor can access Reception",
+      "timestamp": "2026-04-23T12:06:48.983Z"
+    },
+    {
+      "testName": "Cross-Role: Receptionist → Doctor",
+      "message": "SECURITY ISSUE: Receptionist can access Doctor",
+      "timestamp": "2026-04-23T12:06:51.997Z"
+    },
+    {
+      "testName": "Cross-Role: Receptionist → Admin",
+      "message": "SECURITY ISSUE: Receptionist can access Admin",
+      "timestamp": "2026-04-23T12:06:53.121Z"
+    }
+  ]
+}

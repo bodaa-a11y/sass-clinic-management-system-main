@@ -1,0 +1,105 @@
+{
+  "total": 14,
+  "passed": 8,
+  "failed": 6,
+  "tests": [
+    {
+      "testName": "Doctor Login",
+      "passed": true,
+      "message": "Successfully logged in as Doctor",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:34.687Z"
+    },
+    {
+      "testName": "Doctor Dashboard - Page Load",
+      "passed": true,
+      "message": "Dashboard loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:36.493Z"
+    },
+    {
+      "testName": "Doctor Dashboard - UI Elements",
+      "passed": false,
+      "message": "No buttons found on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:36.499Z"
+    },
+    {
+      "testName": "Waiting List - Waiting List Section",
+      "passed": false,
+      "message": "Waiting list section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:37.909Z"
+    },
+    {
+      "testName": "Start Consultation - Start Button",
+      "passed": false,
+      "message": "Start consultation button not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:39.298Z"
+    },
+    {
+      "testName": "Start Consultation - UI Elements",
+      "passed": false,
+      "message": "No buttons found on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:39.305Z"
+    },
+    {
+      "testName": "Medical Records - Page Load",
+      "passed": true,
+      "message": "Medical records page loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:41.762Z"
+    },
+    {
+      "testName": "Medical Records - Records Section",
+      "passed": true,
+      "message": "Medical records section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:41.762Z"
+    },
+    {
+      "testName": "Prescriptions - Page Load",
+      "passed": true,
+      "message": "Prescriptions page loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:43.612Z"
+    },
+    {
+      "testName": "Prescriptions - Prescriptions Section",
+      "passed": true,
+      "message": "Prescriptions section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:43.612Z"
+    },
+    {
+      "testName": "Permissions - Admin Page Access",
+      "passed": false,
+      "message": "SECURITY ISSUE: Can access admin page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:45.892Z"
+    },
+    {
+      "testName": "Permissions - Reception Page Access",
+      "passed": false,
+      "message": "SECURITY ISSUE: Can access reception page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:47.961Z"
+    },
+    {
+      "testName": "Permissions - Doctor Page Access",
+      "passed": true,
+      "message": "Can access doctor page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:49.931Z"
+    },
+    {
+      "testName": "Logout",
+      "passed": true,
+      "message": "Logged out successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:05:51.978Z"
+    }
+  ]
+}

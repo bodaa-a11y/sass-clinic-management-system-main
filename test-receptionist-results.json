@@ -1,0 +1,84 @@
+{
+  "total": 11,
+  "passed": 8,
+  "failed": 3,
+  "tests": [
+    {
+      "testName": "Receptionist Login",
+      "passed": true,
+      "message": "Successfully logged in as Receptionist",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:19.906Z"
+    },
+    {
+      "testName": "Receptionist Dashboard - Page Load",
+      "passed": true,
+      "message": "Dashboard loaded successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:25.051Z"
+    },
+    {
+      "testName": "Receptionist Dashboard - UI Elements",
+      "passed": true,
+      "message": "Found 26 buttons on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:25.070Z"
+    },
+    {
+      "testName": "Appointments Management - Appointments Section",
+      "passed": true,
+      "message": "Appointments section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:26.618Z"
+    },
+    {
+      "testName": "Appointments Management - UI Elements",
+      "passed": true,
+      "message": "Found 26 buttons on page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:26.635Z"
+    },
+    {
+      "testName": "Patients Management - Patients Section",
+      "passed": true,
+      "message": "Patients section found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:28.169Z"
+    },
+    {
+      "testName": "Invoices Management - Invoices Section",
+      "passed": false,
+      "message": "Invoices section not found",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:29.290Z"
+    },
+    {
+      "testName": "Permissions - Doctor Page Access",
+      "passed": false,
+      "message": "Incorrectly accessed doctor page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:30.696Z"
+    },
+    {
+      "testName": "Permissions - Admin Page Access",
+      "passed": false,
+      "message": "Incorrectly accessed admin page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:32.678Z"
+    },
+    {
+      "testName": "Permissions - Reception Page Access",
+      "passed": true,
+      "message": "Can access reception page",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:33.992Z"
+    },
+    {
+      "testName": "Logout",
+      "passed": true,
+      "message": "Logged out successfully",
+      "screenshot": null,
+      "timestamp": "2026-04-23T12:04:36.045Z"
+    }
+  ]
+}
