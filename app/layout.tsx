@@ -4,7 +4,20 @@ import { QueryProvider } from "@/lib/QueryProvider";
 import { SkipToContent } from "@/components/accessibility/skip-to-content";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { Tajawal, Reem_Kufi } from "next/font/google";
 import "./globals.css";
+
+const tajawal = Tajawal({
+  subsets: ["arabic"],
+  weight: ["300", "400", "500", "700", "800", "900"],
+  variable: "--font-tajawal",
+});
+
+const reemKufi = Reem_Kufi({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-reem-kufi",
+});
 
 export const metadata: Metadata = {
   title: "منصة إدارة العيادات",
@@ -31,7 +44,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className="h-full antialiased"
+      className={`h-full antialiased ${tajawal.variable} ${reemKufi.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
